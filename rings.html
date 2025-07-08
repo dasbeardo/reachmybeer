@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>90s Screensaver Tunnel Fullscreen</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+            cursor: none;
+            user-select: none;
+        }
+        #canvas {
+            display: block;
+            background: linear-gradient(45deg, #001122, #000044);
+        }
+        .scanlines {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,0,0.03) 2px, rgba(0,255,0,0.03) 4px);
+            pointer-events: none;
+            z-index: 200;
+        }
+        html, body {
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+<body>
+    <div class="scanlines"></div>
+    <canvas id="canvas"></canvas>
+<script>
+    // Tunnel fullscreen only!
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    let width, height, centerX, centerY, maxRadius;
+    let rings = [];
+    const ringCount = 24; // Number of rings (tweak for density/speed)
+
+    function resize() {
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+        centerX = width / 2;
+        centerY = height / 2;
+        // Radius from center to furthest corner (covers entire screen)
+        maxRadius = Math.sqrt(centerX * centerX + centerY * centerY);
+        initRings();
+    }
+
+    function initRings() {
+        rings = [];
+        for (let i = 0; i < ringCount; i++) {
+            rings.push({
+                radius: (i / ringCount) * maxRadius,
+                hue: i * (360 / ringCount)
+            });
+        }
+    }
+
+    function updateRings() {
+        for (let ring of rings) {
+            ring.radius += maxRadius / 36; // speed (lower divisor = faster)
+            ring.hue += 2;
+            if (ring.radius > maxRadius) {
+                ring.radius = 0;
+            }
+        }
+    }
+
+    function drawRings() {
+        for (let ring of rings) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, ring.radius, 0, Math.PI * 2);
+            ctx.strokeStyle = `hsl(${ring.hue % 360}, 100%, 50%)`;
+            ctx.lineWidth = 3;
+            ctx.globalAlpha = 1 - ring.radius / maxRadius;
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = ctx.strokeStyle;
+            ctx.stroke();
+            ctx.restore();
+        }
+        ctx.globalAlpha = 1;
+    }
+
+    function animate() {
+        ctx.clearRect(0, 0, width, height);
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, width, height);
+        updateRings();
+        drawRings();
+        requestAnimationFrame(animate);
+    }
+
+    window.addEventListener('resize', resize);
+
+    // Start everything
+    resize();
+    animate();
+</script>
+</body>
+</html>

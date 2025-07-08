@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>90s Screensaver</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+            cursor: none;
+            user-select: none;
+        }
+
+```
+    #canvas {
+        display: block;
+        background: linear-gradient(45deg, #001122, #000044);
+    }
+    
+    .ui {
+        position: absolute;
+        color: #00ff00;
+        font-size: 12px;
+        text-shadow: 0 0 10px currentColor;
+        z-index: 100;
+    }
+    
+    .logo { top: 20px; left: 20px; }
+    .fps { top: 20px; right: 20px; color: #ffff00; }
+    .mode { bottom: 20px; left: 20px; color: #ff00ff; }
+    .controls { bottom: 20px; right: 20px; color: #00ffff; font-size: 10px; }
+    
+    .scanlines {
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,0,0.03) 2px, rgba(0,255,0,0.03) 4px);
+        pointer-events: none;
+        z-index: 200;
+    }
+</style>
+```
+
+</head>
+<body>
+    <div class="scanlines"></div>
+    <div class="ui logo">SCREENSAVER v3.0</div>
+    <div class="ui fps" id="fps">FPS: --</div>
+    <div class="ui mode" id="mode">MODE: SHAPES</div>
+    <div class="ui controls">SPACE: Change Mode | CLICK: Add Effects</div>
+    <canvas id="canvas"></canvas>
+
+```
+<script>
+    try {
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const fpsEl = document.getElementById('fps');
+        const modeEl = document.getElementById('mode');
+        
+        let width, height;
+        let time = 0;
+        let fps = 0;
+        let fpsCount = 0;
+        let lastFpsTime = 0;
+        let currentMode = 0;
+        const modes = ['SHAPES', 'STARS', 'MATRIX', 'TUNNEL', 'WAVES'];
+        
+        // Arrays for effects
+        let shapes = [];
+        let particles = [];
+        let stars = [];
+        let matrixChars = [];
+        let rings = [];
+        
+        function resize() {
+            try {
+                width = canvas.width = window.innerWidth;
+                height = canvas.height = window.innerHeight;
+                init();
+            } catch(e) {
+                console.error('Resize error:', e);
+            }
+        }
+        
+        function init() {
+            try {
+                shapes = [];
+                particles = [];
+                stars = [];
+                matrixChars = [];
+                rings = [];
+                
+                // Initialize shapes
+                for(let i = 0; i < 12; i++) {
+                    shapes.push({
+                        x: Math.random() * width,
+                        y: Math.random() * height,
+                        size: 20 + Math.random() * 40,
+                        speedX: (Math.random() - 0.5) * 4,
+                        speedY: (Math.random() - 0.5) * 4,
+                        rotation: 0,
+                        rotSpeed: (Math.random() - 0.5) * 0.1,
+                        type: Math.floor(Math.random() * 4),
+                        hue: Math.random() * 360
+                    });
+                }
+                
+                // Initialize stars
+                for(let i = 0; i < 80; i++) {
+                    stars.push({
+                        x: (Math.random() - 0.5) * 1000,
+                        y: (Math.random() - 0.5) * 1000,
+                        z: Math.random() * 1000,
+                        speed: 2 + Math.random() * 6
+                    });
+                }
+                
+                // Initialize matrix
+                for(let i = 0; i < 30; i++) {
+                    matrixChars.push({
+                        x: Math.random() * width,
+                        y: -Math.random() * height,
+                        speed: 2 + Math.random() * 8,
+                        chars: [],
+                        length: 8 + Math.random() * 12
+                    });
+                }
+                
+                // Initialize rings
+                for(let i = 0; i < 15; i++) {
+                    rings.push({
+                        z: i * 50,
+                        hue: i * 24
+                    });
+                }
+            } catch(e) {
+                console.error('Init error:', e);
+            }
+        }
+        
+        function updateShapes() {
+            try {
+                for(let shape of shapes) {
+                    shape.x += shape.speedX;
+                    shape.y += shape.speedY;
+                    shape.rotation += shape.rotSpeed;
+                    shape.hue += 1;
+                    
+                    if(shape.x < 0 || shape.x > width) shape.speedX *= -1;
+                    if(shape.y < 0 || shape.y > height) shape.speedY *= -1;
+                    
+                    shape.x = Math.max(0, Math.min(width, shape.x));
+                    shape.y = Math.max(0, Math.min(height, shape.y));
+                }
+            } catch(e) {
+                console.error('Update shapes error:', e);
+            }
+        }
+        
+        function drawShapes() {
+            try {
+                for(let shape of shapes) {
+                    ctx.save();
+                    ctx.translate(shape.x, shape.y);
+                    ctx.rotate(shape.rotation);
+                    
+                    const hue = shape.hue % 360;
+                    ctx.strokeStyle = `hsl(${hue}, 100%, 60%)`;
+                    ctx.fillStyle = `hsla(${hue}, 100%, 60%, 0.2)`;
+                    ctx.lineWidth = 3;
+                    ctx.shadowBlur = 20;
+                    ctx.shadowColor = ctx.strokeStyle;
+                    
+                    const size = shape.size;
+                    
+                    ctx.beginPath();
+                    switch(shape.type) {
+                        case 0: // Square
+                            ctx.rect(-size/2, -size/2, size, size);
+                            break;
+                        case 1: // Circle
+                            ctx.arc(0, 0, size/2, 0, Math.PI * 2);
+                            break;
+                        case 2: // Triangle
+                            ctx.moveTo(0, -size/2);
+                            ctx.lineTo(-size/2, size/2);
+                            ctx.lineTo(size/2, size/2);
+                            ctx.closePath();
+                            break;
+                        case 3: // Diamond
+                            ctx.moveTo(0, -size/2);
+                            ctx.lineTo(size/2, 0);
+                            ctx.lineTo(0, size/2);
+                            ctx.lineTo(-size/2, 0);
+                            ctx.closePath();
+                            break;
+                    }
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.restore();
+                }
+            } catch(e) {
+                console.error('Draw shapes error:', e);
+            }
+        }
+        
+        function updateStars() {
+            try {
+                for(let star of stars) {
+                    star.z -= star.speed;
+                    if(star.z <= 0) {
+                        star.x = (Math.random() - 0.5) * 1000;
+                        star.y = (Math.random() - 0.5) * 1000;
+                        star.z = 1000;
+                    }
+                }
+            } catch(e) {
+                console.error('Update stars error:', e);
+            }
+        }
+        
+        function drawStars() {
+            try {
+                ctx.fillStyle = '#fff';
+                for(let star of stars) {
+                    const x = star.x / star.z * 200 + width / 2;
+                    const y = star.y / star.z * 200 + height / 2;
+                    const size = Math.max(0.5, (1 - star.z / 1000) * 3);
+                    
+                    if(x >= 0 && x <= width && y >= 0 && y <= height) {
+                        ctx.fillRect(x, y, size, size);
+                    }
+                }
+            } catch(e) {
+                console.error('Draw stars error:', e);
+            }
+        }
+        
+        function updateMatrix() {
+            try {
+                for(let drop of matrixChars) {
+                    drop.y += drop.speed;
+                    if(drop.y > height + drop.length * 20) {
+                        drop.y = -drop.length * 20;
+                        drop.x = Math.random() * width;
+                    }
+                }
+            } catch(e) {
+                console.error('Update matrix error:', e);
+            }
+        }
+        
+        function drawMatrix() {
+            try {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+                ctx.fillRect(0, 0, width, height);
+                
+                ctx.fillStyle = '#0f0';
+                ctx.font = '16px monospace';
+                
+                for(let drop of matrixChars) {
+                    for(let i = 0; i < drop.length; i++) {
+                        const alpha = 1 - i / drop.length;
+                        ctx.globalAlpha = alpha;
+                        const char = String.fromCharCode(65 + Math.random() * 26);
+                        ctx.fillText(char, drop.x, drop.y + i * 20);
+                    }
+                }
+                ctx.globalAlpha = 1;
+            } catch(e) {
+                console.error('Draw matrix error:', e);
+            }
+        }
+        
+        function updateRings() {
+            try {
+                for(let ring of rings) {
+                    ring.z -= 8;
+                    ring.hue += 2;
+                    if(ring.z <= 0) {
+                        ring.z = 750;
+                    }
+                }
+            } catch(e) {
+                console.error('Update rings error:', e);
+            }
+        }
+        
+        function drawRings() {
+            try {
+                const centerX = width / 2;
+                const centerY = height / 2;
+                
+                for(let ring of rings) {
+                    const radius = (750 - ring.z) / 3;
+                    if(radius > 0) {
+                        ctx.strokeStyle = `hsl(${ring.hue % 360}, 100%, 50%)`;
+                        ctx.lineWidth = 3;
+                        ctx.globalAlpha = 1 - ring.z / 750;
+                        ctx.beginPath();
+                        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+                        ctx.stroke();
+                    }
+                }
+                ctx.globalAlpha = 1;
+            } catch(e) {
+                console.error('Draw rings error:', e);
+            }
+        }
+        
+        function drawWaves() {
+            try {
+                const centerY = height / 2;
+                const amplitude = 60;
+                
+                ctx.strokeStyle = '#0ff';
+                ctx.lineWidth = 3;
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = '#0ff';
+                
+                ctx.beginPath();
+                for(let x = 0; x <= width; x += 5) {
+                    const y = centerY + Math.sin(x * 0.01 + time * 0.005) * amplitude;
+                    if(x === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+                
+                ctx.strokeStyle = '#f0f';
+                ctx.shadowColor = '#f0f';
+                ctx.beginPath();
+                for(let x = 0; x <= width; x += 5) {
+                    const y = centerY + Math.cos(x * 0.015 + time * 0.003) * amplitude * 0.7;
+                    if(x === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+            } catch(e) {
+                console.error('Draw waves error:', e);
+            }
+        }
+        
+        function updateParticles() {
+            try {
+                for(let i = particles.length - 1; i >= 0; i--) {
+                    const p = particles[i];
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.life -= 0.02;
+                    p.hue += 3;
+                    
+                    if(p.life <= 0) {
+                        particles.splice(i, 1);
+                    }
+                }
+            } catch(e) {
+                console.error('Update particles error:', e);
+            }
+        }
+        
+        function drawParticles() {
+            try {
+                for(let p of particles) {
+                    ctx.save();
+                    ctx.globalAlpha = p.life;
+                    ctx.fillStyle = `hsl(${p.hue % 360}, 100%, 60%)`;
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = ctx.fillStyle;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                }
+            } catch(e) {
+                console.error('Draw particles error:', e);
+            }
+        }
+        
+        function drawBackground() {
+            try {
+                const gradient = ctx.createLinearGradient(0, 0, width, height);
+                gradient.addColorStop(0, '#001122');
+                gradient.addColorStop(0.5, '#000044');
+                gradient.addColorStop(1, '#001122');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, width, height);
+                
+                if(currentMode === 0) {
+                    ctx.strokeStyle = 'rgba(0, 255, 255, 0.1)';
+                    ctx.lineWidth = 1;
+                    
+                    for(let x = 0; x < width; x += 50) {
+                        ctx.beginPath();
+                        ctx.moveTo(x, 0);
+                        ctx.lineTo(x, height);
+                        ctx.stroke();
+                    }
+                    
+                    for(let y = 0; y < height; y += 50) {
+                        ctx.beginPath();
+                        ctx.moveTo(0, y);
+                        ctx.lineTo(width, y);
+                        ctx.stroke();
+                    }
+                }
+            } catch(e) {
+                console.error('Draw background error:', e);
+            }
+        }
+        
+        function animate(timestamp) {
+            try {
+                time = timestamp;
+                
+                // FPS calculation
+                fpsCount++;
+                if(timestamp - lastFpsTime >= 1000) {
+                    fps = Math.round(fpsCount * 1000 / (timestamp - lastFpsTime));
+                    fpsEl.textContent = `FPS: ${fps}`;
+                    fpsCount = 0;
+                    lastFpsTime = timestamp;
+                }
+                
+                // Clear canvas
+                ctx.clearRect(0, 0, width, height);
+                
+                // Draw based on mode
+                switch(currentMode) {
+                    case 0: // Shapes
+                        drawBackground();
+                        updateShapes();
+                        drawShapes();
+                        break;
+                    case 1: // Stars
+                        ctx.fillStyle = '#000';
+                        ctx.fillRect(0, 0, width, height);
+                        updateStars();
+                        drawStars();
+                        break;
+                    case 2: // Matrix
+                        updateMatrix();
+                        drawMatrix();
+                        break;
+                    case 3: // Tunnel
+                        ctx.fillStyle = '#000';
+                        ctx.fillRect(0, 0, width, height);
+                        updateRings();
+                        drawRings();
+                        break;
+                    case 4: // Waves
+                        drawBackground();
+                        drawWaves();
+                        break;
+                }
+                
+                // Always update particles
+                updateParticles();
+                drawParticles();
+                
+                // Add random particles
+                if(Math.random() < 0.1 && particles.length < 50) {
+                    particles.push({
+                        x: Math.random() * width,
+                        y: Math.random() * height,
+                        vx: (Math.random() - 0.5) * 4,
+                        vy: (Math.random() - 0.5) * 4,
+                        size: 2 + Math.random() * 3,
+                        life: 1,
+                        hue: Math.random() * 360
+                    });
+                }
+                
+                requestAnimationFrame(animate);
+            } catch(e) {
+                console.error('Animation error:', e);
+                // Try to continue anyway
+                requestAnimationFrame(animate);
+            }
+        }
+        
+        // Event listeners
+        window.addEventListener('resize', resize);
+        
+        canvas.addEventListener('mousemove', (e) => {
+            try {
+                for(let i = 0; i < 3; i++) {
+                    particles.push({
+                        x: e.clientX,
+                        y: e.clientY,
+                        vx: (Math.random() - 0.5) * 6,
+                        vy: (Math.random() - 0.5) * 6,
+                        size: 2 + Math.random() * 3,
+                        life: 1,
+                        hue: Math.random() * 360
+                    });
+                }
+            } catch(e) {
+                console.error('Mouse move error:', e);
+            }
+        });
+        
+        canvas.addEventListener('click', (e) => {
+            try {
+                for(let i = 0; i < 10; i++) {
+                    particles.push({
+                        x: e.clientX,
+                        y: e.clientY,
+                        vx: (Math.random() - 0.5) * 8,
+                        vy: (Math.random() - 0.5) * 8,
+                        size: 2 + Math.random() * 4,
+                        life: 1,
+                        hue: Math.random() * 360
+                    });
+                }
+            } catch(e) {
+                console.error('Click error:', e);
+            }
+        });
+        
+        document.addEventListener('keydown', (e) => {
+            try {
+                if(e.code === 'Space') {
+                    e.preventDefault();
+                    currentMode = (currentMode + 1) % modes.length;
+                    modeEl.textContent = `MODE: ${modes[currentMode]}`;
+                }
+            } catch(e) {
+                console.error('Keydown error:', e);
+            }
+        });
+        
+        // Auto mode switch
+        setInterval(() => {
+            try {
+                currentMode = (currentMode + 1) % modes.length;
+                modeEl.textContent = `MODE: ${modes[currentMode]}`;
+            } catch(e) {
+                console.error('Auto switch error:', e);
+            }
+        }, 20000);
+        
+        // Initialize and start
+        resize();
+        requestAnimationFrame(animate);
+        
+    } catch(e) {
+        console.error('Main error:', e);
+        document.body.innerHTML = '<div style="color: red; font-family: monospace; padding: 20px;">Error loading screensaver. Check console for details.</div>';
+    }
+</script>
+```
+
+</body>
+</html>
