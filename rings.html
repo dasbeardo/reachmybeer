@@ -64,8 +64,8 @@
 
     function updateRings() {
         for (let ring of rings) {
-            ring.radius += maxRadius / 36; // speed (lower divisor = faster)
-            ring.hue += 2;
+            ring.radius += maxRadius / 180; // speed (lower divisor = faster)
+            ring.hue += 1;
             if (ring.radius > maxRadius) {
                 ring.radius = 0;
             }
