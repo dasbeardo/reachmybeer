@@ -57,15 +57,15 @@
         for (let i = 0; i < ringCount; i++) {
             rings.push({
                 radius: (i / ringCount) * maxRadius,
-                hue: i * (420 / ringCount)
+                hue: i * (120 / ringCount)
             });
         }
     }
 
     function updateRings() {
         for (let ring of rings) {
-            ring.radius += maxRadius / 360; // speed (lower divisor = faster)
-            ring.hue += .01;
+            ring.radius += maxRadius / 120; // speed (lower divisor = faster)
+            ring.hue += .1;
             if (ring.radius > maxRadius) {
                 ring.radius = 0;
             }
