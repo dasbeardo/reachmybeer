@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Can't Reach My Beer</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One:wght@400&family=Inter:wght@400;500;600;700&display=swap');
+        
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #2C1810 0%, #8B4513 50%, #D2691E 100%);
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .game-container {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            background: linear-gradient(to bottom, 
+                #87CEEB 0%, 
+                #DEB887 30%, 
+                #CD853F 70%, 
+                #8B4513 100%);
+        }
+
+        /* Kitchen counter */
+        .kitchen-counter {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 120px;
+            background: linear-gradient(135deg, #A0522D 0%, #8B4513 100%);
+            border-bottom: 4px solid #654321;
+            border-right: 3px solid #654321;
+            box-shadow: 5px 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .kitchen-counter::before {
+            content: '';
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            height: 8px;
+            background: #654321;
+            border-radius: 4px;
+        }
+
+        .title {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+            font-family: 'Fredoka One', cursive;
+            font-size: 2.2em;
+            color: #8B0000;
+            text-shadow: 2px 2px 0px #FFD700, 4px 4px 8px rgba(0,0,0,0.3);
+            z-index: 50;
+            background: rgba(255,255,255,0.9);
+            padding: 10px 20px;
+            border-radius: 15px;
+            border: 3px solid #8B4513;
+        }
+
+        .granny {
+            position: absolute;
+            font-size: 4em;
+            transition: all 0.6s cubic-bezier(0.68,-0.55,0.27,1.55);
+            z-index: 10;
+            filter: drop-shadow(3px 5px 8px rgba(0,0,0,0.4));
+            left: 50px;
+        }
+
+        .beer {
+            position: absolute;
+            top: 40px;
+            left: 80px;
+            font-size: 2.5em;
+            animation: glisten 2s infinite;
+            filter: drop-shadow(2px 2px 6px rgba(0,0,0,0.4));
+            z-index: 20;
+        }
+
+        @keyframes glisten {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            50% { transform: scale(1.05) rotate(-2deg); }
+        }
+
+        .combo-display {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,248,255,0.9) 100%);
+            padding: 35px;
+            border-radius: 20px;
+            border: 4px solid #8B4513;
+            text-align: center;
+            min-width: 400px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.5);
+            backdrop-filter: blur(10px);
+        }
+
+        .combo-sequence {
+            font-size: 3.5em;
+            margin: 25px 0;
+            letter-spacing: 12px;
+            min-height: 90px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+
+        .key-icon {
+            margin: 0 10px;
+            transition: all 0.3s cubic-bezier(0.68,-0.55,0.27,1.55);
+            vertical-align: middle;
+            display: inline-block;
+            padding: 8px 12px;
+            border-radius: 12px;
+            font-weight: 700;
+        }
+
+        .current-key {
+            color: #FF4444;
+            background: rgba(255, 68, 68, 0.1);
+            transform: scale(1.3);
+            animation: pulse 1.2s infinite;
+            border: 2px solid #FF4444;
+        }
+
+        .completed-key {
+            color: #22C55E;
+            background: rgba(34, 197, 94, 0.1);
+            transform: scale(0.95);
+            border: 2px solid #22C55E;
+            opacity: 0.8;
+        }
+
+        .future-key {
+            color: #64748B;
+            background: rgba(100, 116, 139, 0.1);
+            border: 2px solid #CBD5E1;
+            opacity: 0.6;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1.3); box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.4); }
+            50% { transform: scale(1.4); box-shadow: 0 0 0 10px rgba(255, 68, 68, 0); }
+        }
+
+        .timer-bar {
+            width: 100%;
+            height: 12px;
+            background: #E2E8F0;
+            border-radius: 6px;
+            overflow: hidden;
+            margin: 25px 0;
+            border: 2px solid #8B4513;
+        }
+
+        .timer-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #EF4444 0%, #F59E0B 50%, #22C55E 100%);
+            transition: width 0.1s linear;
+            border-radius: 4px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 25px;
+            background: #E2E8F0;
+            border-radius: 12px;
+            overflow: hidden;
+            margin: 25px 0;
+            border: 2px solid #8B4513;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #8B5CF6 0%, #06B6D4 50%, #10B981 100%);
+            transition: width 0.4s cubic-bezier(0.68,-0.55,0.27,1.55);
+            border-radius: 10px;
+        }
+
+        .instructions {
+            color: #475569;
+            font-size: 1.1em;
+            margin: 15px 0;
+            font-weight: 500;
+        }
+
+        .score {
+            position: absolute;
+            top: 30px;
+            left: 30px;
+            font-size: 1.4em;
+            color: #8B0000;
+            font-weight: 700;
+            background: rgba(255,255,255,0.9);
+            padding: 8px 16px;
+            border-radius: 12px;
+            border: 2px solid #8B4513;
+            z-index: 50;
+        }
+
+        .pause-btn {
+            position: absolute;
+            top: 100px;
+            left: 30px;
+            background: linear-gradient(135deg, #8B5CF6 0%, #06B6D4 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1.1em;
+            border-radius: 10px;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 8px rgba(139, 92, 246, 0.3);
+            z-index: 50;
+        }
+
+        .pause-btn:hover {
+            background: linear-gradient(135deg, #7C3AED 0%, #0891B2 100%);
+            transform: scale(1.05);
+        }
+
+        .high-scores {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            background: rgba(255,255,255,0.9);
+            padding: 15px;
+            border-radius: 12px;
+            border: 2px solid #8B4513;
+            font-size: 0.9em;
+            color: #334155;
+            font-weight: 600;
+            z-index: 50;
+            max-width: 200px;
+        }
+
+        .sobriety-meter {
+            position: absolute;
+            top: 120px;
+            right: 30px;
+            width: 30px;
+            height: 250px;
+            background: rgba(255,255,255,0.9);
+            border-radius: 15px;
+            overflow: hidden;
+            border: 3px solid #8B4513;
+            z-index: 50;
+        }
+
+        .sobriety-fill {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            background: linear-gradient(to top, #EF4444 0%, #F59E0B 40%, #22C55E 100%);
+            transition: height 0.4s cubic-bezier(0.68,-0.55,0.27,1.55);
+            border-radius: 12px;
+        }
+
+        .sobriety-label {
+            position: absolute;
+            top: 380px;
+            right: 20px;
+            color: #8B0000;
+            font-size: 0.9em;
+            font-weight: 600;
+            background: rgba(255,255,255,0.9);
+            padding: 4px 8px;
+            border-radius: 6px;
+            writing-mode: vertical-lr;
+            text-orientation: mixed;
+            z-index: 50;
+        }
+
+        .start-screen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,248,255,0.9) 100%);
+            padding: 50px;
+            border-radius: 25px;
+            text-align: center;
+            color: #334155;
+            font-size: 1.1em;
+            border: 4px solid #8B4513;
+            max-width: 550px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .start-screen h2 {
+            font-family: 'Fredoka One', cursive;
+            font-size: 2.5em;
+            color: #8B0000;
+            margin-bottom: 20px;
+        }
+
+        .start-btn, .restart-btn {
+            background: linear-gradient(135deg, #8B5CF6 0%, #06B6D4 100%);
+            color: white;
+            border: none;
+            padding: 15px 35px;
+            font-size: 1.3em;
+            border-radius: 12px;
+            cursor: pointer;
+            margin: 20px 10px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.68,-0.55,0.27,1.55);
+            box-shadow: 0 8px 16px rgba(139, 92, 246, 0.3);
+        }
+
+        .start-btn:hover, .restart-btn:hover {
+            background: linear-gradient(135deg, #7C3AED 0%, #0891B2 100%);
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 12px 24px rgba(139, 92, 246, 0.4);
+        }
+
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,248,255,0.9) 100%);
+            padding: 50px;
+            border-radius: 25px;
+            text-align: center;
+            color: #334155;
+            font-size: 1.3em;
+            border: 4px solid #8B4513;
+            display: none;
+            max-width: 550px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .pause-screen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,248,255,0.9) 100%);
+            padding: 50px;
+            border-radius: 25px;
+            text-align: center;
+            color: #334155;
+            font-size: 1.3em;
+            border: 4px solid #8B4513;
+            display: none;
+            max-width: 400px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+        }
+
+        .status-message {
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(30, 41, 59, 0.95);
+            color: #F1F5F9;
+            padding: 20px 30px;
+            border-radius: 15px;
+            font-size: 1.2em;
+            font-weight: 600;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            text-align: center;
+            max-width: 450px;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+
+        .beer-close {
+            transform: scale(1.4) rotate(-20deg) !important;
+            animation: celebration 0.6s infinite !important;
+        }
+
+        @keyframes celebration {
+            0%, 100% { transform: scale(1.4) rotate(-20deg); }
+            50% { transform: scale(1.6) rotate(-15deg); }
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .title {
+                font-size: 1.8em;
+                top: 20px;
+                right: 20px;
+                padding: 8px 16px;
+            }
+            
+            .combo-display {
+                min-width: 90%;
+                padding: 25px;
+            }
+            
+            .combo-sequence {
+                font-size: 2.5em;
+                letter-spacing: 8px;
+            }
+            
+            .start-screen {
+                max-width: 90%;
+                padding: 30px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="kitchen-counter"></div>
+        <div class="title">Can't Reach My Beer!</div>
+        <div class="beer" id="beer">🍺</div>
+        <div class="granny" id="granny">👵</div>
+        <div class="score" id="score">Level 1 | Beers: 0</div>
+        <button class="pause-btn" id="pauseBtn" onclick="togglePause()" style="display: none;">⏸️ Pause</button>
+        
+        <div class="high-scores" id="highScores">
+            <div style="font-size: 1.1em; margin-bottom: 8px; color: #8B0000;">🏆 High Scores</div>
+            <div id="scoresList">No scores yet!</div>
+        </div>
+        
+        <div class="sobriety-meter">
+            <div class="sobriety-fill" id="sobrietyFill"></div>
+        </div>
+        <div class="sobriety-label">SOBRIETY</div>
+
+        <div class="start-screen" id="startScreen">
+            <h2>Can't Reach My Beer!</h2>
+            <p>You're Granny Gertrude, and you've fallen down after a few too many brewskis! 🍺</p>
+            <p>Follow the button combinations to slowly crawl back up to your precious beer on the kitchen counter.</p>
+            <p>Each time you grab a beer, the next level gets harder with <strong>longer combos</strong> and <strong>faster timers</strong>!</p>
+            <p>How many beers can Granny grab before she finally falls down for good?</p>
+            <p><strong>Controls:</strong> Arrow Keys (↑↓←→), WASD, or SPACE | Press P to pause</p>
+            <button class="start-btn" onclick="startGame()">Start Crawling!</button>
+        </div>
+
+        <div class="combo-display" id="comboDisplay" style="display: none;">
+            <div class="combo-sequence" id="comboSequence"></div>
+            <div class="timer-bar">
+                <div class="timer-fill" id="timerFill"></div>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="instructions">Match the sequence before time runs out!</div>
+        </div>
+
+        <div class="pause-screen" id="pauseScreen">
+            <h2>Game Paused</h2>
+            <p>Take a breather, Granny will wait!</p>
+            <button class="start-btn" onclick="togglePause()">Resume</button>
+            <button class="restart-btn" onclick="restartGame()">Restart</button>
+        </div>
+
+        <div class="game-over" id="gameOver">
+            <h2 id="gameOverTitle">Game Over!</h2>
+            <p id="gameOverText"></p>
+            <button class="restart-btn" onclick="restartGame()">Try Again!</button>
+        </div>
+
+        <div class="status-message" id="statusMessage"></div>
+    </div>
+
+    <script>
+        // Game configuration
+        const TOTAL_PROGRESS = 100;
+        const SOBRIETY_MAX = 100;
+        const SOBRIETY_LOSS_PER_FAIL = 12;
+        const SOBRIETY_LOSS_PER_TIMEOUT = 8;
+        const BASE_PROGRESS_GAIN = 8;
+        const BASE_PROGRESS_LOSS = 5;
+        const BASE_TIME_PER_COMBO = 6000;
+        const TIME_REDUCTION_PER_LEVEL = 400;
+        const MIN_TIME_PER_COMBO = 2000;
+        const COMBO_MIN_LENGTH = 2;
+        const COMBO_MAX_LENGTH = 8;
+
+        // Available keys
+        const AVAILABLE_KEYS = [
+            {code: 'ArrowUp', icon: '⬆️', label: 'UP'},
+            {code: 'ArrowDown', icon: '⬇️', label: 'DOWN'},
+            {code: 'ArrowLeft', icon: '⬅️', label: 'LEFT'},
+            {code: 'ArrowRight', icon: '➡️', label: 'RIGHT'},
+            {code: 'KeyW', icon: 'W', label: 'W'},
+            {code: 'KeyA', icon: 'A', label: 'A'},
+            {code: 'KeyS', icon: 'S', label: 'S'},
+            {code: 'KeyD', icon: 'D', label: 'D'},
+            {code: 'Space', icon: '␣', label: 'SPACE'}
+        ];
+
+        // Granny quotes
+        const grannyQuotes = [
+            "That's one step closer to happy hour!",
+            "I'm not as spry as I used to be...",
+            "Just need a little sip to steady myself.",
+            "Almost there—my favorite brew is in sight!",
+            "You call this a fall? Amateur hour!",
+            "Good thing my hips are titanium!",
+            "My doctor said beer is good for circulation.",
+            "I'm coming for you, sweet nectar!",
+            "This old gal's still got some fight left!",
+            "One more sip and I'll be dancing again!"
+        ];
+
+        // Game state
+        let gameActive = false;
+        let gamePaused = false;
+        let progress = 0;
+        let sobriety = SOBRIETY_MAX;
+        let currentCombo = [];
+        let playerProgress = 0;
+        let comboTimer = null;
+        let timerInterval = null;
+        let timeRemaining = BASE_TIME_PER_COMBO;
+        let comboInProgress = false;
+        let currentLevel = 1;
+        let totalBeersGrabbed = 0;
+        let currentTimePerCombo = BASE_TIME_PER_COMBO;
+        let successStreak = 0;
+        let failStreak = 0;
+
+        // DOM elements
+        const granny = document.getElementById('granny');
+        const beer = document.getElementById('beer');
+        const comboDisplay = document.getElementById('comboDisplay');
+        const comboSequence = document.getElementById('comboSequence');
+        const timerFill = document.getElementById('timerFill');
+        const progressFill = document.getElementById('progressFill');
+        const sobrietyFill = document.getElementById('sobrietyFill');
+        const score = document.getElementById('score');
+        const startScreen = document.getElementById('startScreen');
+        const gameOver = document.getElementById('gameOver');
+        const statusMessage = document.getElementById('statusMessage');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const pauseScreen = document.getElementById('pauseScreen');
+        const highScores = document.getElementById('highScores');
+        const scoresList = document.getElementById('scoresList');
+
+        // High score functions
+        function loadHighScores() {
+            const scores = JSON.parse(localStorage.getItem('beerGameHighScores') || '[]');
+            scores.sort((a, b) => b.beers - a.beers);
+            
+            if (scores.length === 0) {
+                scoresList.textContent = 'No scores yet!';
+            } else {
+                const top5 = scores.slice(0, 5);
+                scoresList.innerHTML = top5.map((score, index) => 
+                    `${index + 1}. ${score.beers} beer${score.beers !== 1 ? 's' : ''}`
+                ).join('<br>');
+            }
+        }
+
+        function saveHighScore(beers) {
+            const scores = JSON.parse(localStorage.getItem('beerGameHighScores') || '[]');
+            scores.push({ beers, date: new Date().toISOString() });
+            scores.sort((a, b) => b.beers - a.beers);
+            localStorage.setItem('beerGameHighScores', JSON.stringify(scores.slice(0, 10)));
+            loadHighScores();
+        }
+
+        // Pause functionality
+        function togglePause() {
+            if (!gameActive) return;
+            
+            gamePaused = !gamePaused;
+            
+            if (gamePaused) {
+                clearTimeout(comboTimer);
+                clearInterval(timerInterval);
+                pauseScreen.style.display = 'block';
+                pauseBtn.textContent = '▶️ Resume';
+            } else {
+                pauseScreen.style.display = 'none';
+                pauseBtn.textContent = '⏸️ Pause';
+                if (comboInProgress) {
+                    startComboTimer();
+                }
+            }
+        }
+
+        function startGame() {
+            gameActive = true;
+            gamePaused = false;
+            progress = 0;
+            sobriety = SOBRIETY_MAX;
+            comboInProgress = false;
+            currentLevel = 1;
+            totalBeersGrabbed = 0;
+            currentTimePerCombo = BASE_TIME_PER_COMBO;
+            successStreak = 0;
+            failStreak = 0;
+            
+            startScreen.style.display = 'none';
+            comboDisplay.style.display = 'block';
+            pauseBtn.style.display = 'block';
+            
+            updateDisplay();
+            loadHighScores();
+            generateNewCombo();
+            showStatus(`Level ${currentLevel}: Crawl to that sweet, sweet beer!`);
+        }
+
+        function generateNewCombo() {
+            if (!gameActive || comboInProgress || gamePaused) return;
+            
+            comboInProgress = true;
+            
+            const baseLength = COMBO_MIN_LENGTH + (currentLevel - 1);
+            const comboLength = Math.min(COMBO_MAX_LENGTH, baseLength);
+            
+            currentCombo = [];
+            const usedKeys = [];
+            
+            for (let i = 0; i < comboLength; i++) {
+                let key;
+                do {
+                    key = AVAILABLE_KEYS[Math.floor(Math.random() * AVAILABLE_KEYS.length)];
+                } while (usedKeys.includes(key.code));
+                
+                usedKeys.push(key.code);
+                currentCombo.push(key);
+            }
+            
+            playerProgress = 0;
+            timeRemaining = currentTimePerCombo;
+            displayCombo();
+            startComboTimer();
+        }
+
+        function displayCombo() {
+            let html = '';
+            currentCombo.forEach((key, index) => {
+                let className = 'key-icon ';
+                if (index < playerProgress) {
+                    className += 'completed-key';
+                } else if (index === playerProgress) {
+                    className += 'current-key';
+                } else {
+                    className += 'future-key';
+                }
+                html += `<span class="${className}">${key.icon}</span>`;
+            });
+            comboSequence.innerHTML = html;
+        }
+
+        function startComboTimer() {
+            if (gamePaused) return;
+            
+            clearTimeout(comboTimer);
+            clearInterval(timerInterval);
+            
+            timeRemaining = currentTimePerCombo;
+            
+            timerInterval = setInterval(() => {
+                if (gamePaused) return;
+                
+                timeRemaining -= 100;
+                const percentage = (timeRemaining / currentTimePerCombo) * 100;
+                timerFill.style.width = `${Math.max(0, percentage)}%`;
+                
+                if (timeRemaining <= 0) {
+                    clearInterval(timerInterval);
+                    timeoutCombo();
+                }
+            }, 100);
+        }
+
+        function handleKeyPress(event) {
+            if (event.code === 'KeyP') {
+                event.preventDefault();
+                togglePause();
+                return;
+            }
+            
+            if (!gameActive || gamePaused) {
+                if (event.code === 'Space' && !gameActive) {
+                    event.preventDefault();
+                    startGame();
+                }
+                return;
+            }
+            
+            event.preventDefault();
+            
+            if (currentCombo.length === 0 || !comboInProgress) return;
+            
+            const expectedKey = currentCombo[playerProgress];
+            if (expectedKey && event.code === expectedKey.code) {
+                playerProgress++;
+                displayCombo();
+                
+                if (playerProgress === currentCombo.length) {
+                    completeCombo();
+                }
+            } else {
+                failCombo("Wrong button! Granny slips back down...");
+            }
+        }
+
+        function completeCombo() {
+            clearTimeout(comboTimer);
+            clearInterval(timerInterval);
+            comboInProgress = false;
+            
+            successStreak++;
+            failStreak = 0;
+            
+            // Momentum system
+            const momentumMultiplier = 1 + (successStreak * 0.2);
+            const progressGain = Math.floor(BASE_PROGRESS_GAIN * momentumMultiplier);
+            const sobrietyGain = Math.floor(3 * momentumMultiplier);
+            
+            progress = Math.min(TOTAL_PROGRESS, progress + progressGain);
+            sobriety = Math.min(SOBRIETY_MAX, sobriety + sobrietyGain);
+            
+            updateDisplay();
+            
+            if (successStreak > 1) {
+                showStatus(`🔥 ${successStreak}x streak! ${getRandomQuote()}`, '#22C55E');
+            } else {
+                showStatus(getRandomQuote(), '#22C55E');
+            }
+            
+            if (progress >= TOTAL_PROGRESS) {
+                nextLevel();
+            } else {
+                setTimeout(() => generateNewCombo(), 1500);
+            }
+        }
+
+        function failCombo(message) {
+            clearTimeout(comboTimer);
+            clearInterval(timerInterval);
+            comboInProgress = false;
+            
+            failStreak++;
+            successStreak = 0;
+            
+            // Momentum system
+            const momentumMultiplier = 1 + (failStreak * 0.15);
+            const progressLoss = Math.floor(BASE_PROGRESS_LOSS * momentumMultiplier);
+            const sobrietyLoss = Math.floor(SOBRIETY_LOSS_PER_FAIL * momentumMultiplier);
+            
+            progress = Math.max(0, progress - progressLoss);
+            sobriety = Math.max(0, sobriety - sobrietyLoss);
+            
+            updateDisplay();
+            
+            if (failStreak > 1) {
+                showStatus(`💥 ${failStreak}x fail streak! ${message}`, '#EF4444');
+            } else {
+                showStatus(message, '#EF4444');
+            }
+            
+            if (sobriety <= 0) {
+                loseGame("Granny passed out from too much drinking!");
+            } else {
+                setTimeout(() => generateNewCombo(), 2000);
+            }
+        }
+
+        function timeoutCombo() {
+            comboInProgress = false;
+            
+            failStreak++;
+            successStreak = 0;
+            
+            const momentumMultiplier = 1 + (failStreak * 0.1);
+            const progressLoss = Math.floor(BASE_PROGRESS_LOSS * momentumMultiplier);
+            const sobrietyLoss = Math.floor(SOBRIETY_LOSS_PER_TIMEOUT * momentumMultiplier);
+            
+            progress = Math.max(0, progress - progressLoss);
+            sobriety = Math.max(0, sobriety - sobrietyLoss);
+            
+            updateDisplay();
+            
+            if (failStreak > 1) {
+                showStatus(`⏰ ${failStreak}x timeout streak! Granny gets dizzy and slides back...`, '#F59E0B');
+            } else {
+                showStatus("Too slow! Granny gets dizzy and slides back...", '#F59E0B');
+            }
+            
+            if (sobriety <= 0) {
+                loseGame("Granny got too tired and fell asleep!");
+            } else {
+                setTimeout(() => generateNewCombo(), 2000);
+            }
+        }
+
+        function nextLevel() {
+            totalBeersGrabbed++;
+            currentLevel++;
+            progress = 0;
+            successStreak = 0;
+            failStreak = 0;
+            
+            currentTimePerCombo = Math.max(MIN_TIME_PER_COMBO, 
+                BASE_TIME_PER_COMBO - (TIME_REDUCTION_PER_LEVEL * (currentLevel - 1)));
+            
+            updateDisplay();
+            
+            const levelMessages = [
+                "🍺 Beer #1 down! Time for another!",
+                "🍺🍺 Two beers! Granny's getting thirsty for more!",
+                "🍺🍺🍺 Three beers! She's on a roll!",
+                "🍺🍺🍺🍺 Four beers! This granny is unstoppable!",
+                "🍺🍺🍺🍺🍺 Five beers! The legend continues!",
+                "🍺🍺🍺🍺🍺🍺 Six beers! Granny is a beer-crawling machine!",
+                "🍺🍺🍺🍺🍺🍺🍺 Seven beers! She's entering legendary status!",
+                "🍺🍺🍺🍺🍺🍺🍺🍺 Eight beers! This is getting ridiculous!",
+                "🍺🍺🍺🍺🍺🍺🍺🍺🍺 Nine beers! Granny defies all logic!"
+            ];
+            
+            const message = levelMessages[Math.min(totalBeersGrabbed - 1, levelMessages.length - 1)] || 
+                           `🍺×${totalBeersGrabbed} This granny is absolutely unstoppable!`;
+            
+            showStatus(`Level ${currentLevel}: ${message}`, '#22C55E');
+            
+            setTimeout(() => {
+                showStatus(`Level ${currentLevel}: ${currentLevel + 1} buttons, ${(currentTimePerCombo/1000).toFixed(1)}s per combo!`);
+                setTimeout(() => generateNewCombo(), 2000);
+            }, 3000);
+        }
+
+        function updateDisplay() {
+            const containerHeight = window.innerHeight;
+            const maxHeight = 150;
+            const minHeight = containerHeight - 100;
+            
+            const progressRatio = progress / TOTAL_PROGRESS;
+            const grannyY = minHeight - (progressRatio * (minHeight - maxHeight));
+            
+            granny.style.bottom = `${containerHeight - grannyY}px`;
+            granny.style.left = '50px';
+            
+            const wobble = ((SOBRIETY_MAX - sobriety) / SOBRIETY_MAX) * 15;
+            granny.style.transform = `rotate(${Math.sin(Date.now() / 500) * wobble}deg)`;
+            
+            progressFill.style.width = `${progress}%`;
+            score.textContent = `Level ${currentLevel} | Beers: ${totalBeersGrabbed} | ${(currentTimePerCombo/1000).toFixed(1)}s`;
+            
+            const sobrietyPercentage = (sobriety / SOBRIETY_MAX) * 100;
+            sobrietyFill.style.height = `${sobrietyPercentage}%`;
+            
+            if (progress > 85) {
+                beer.classList.add('beer-close');
+            } else {
+                beer.classList.remove('beer-close');
+            }
+        }
+
+        function showStatus(message, color = '#06B6D4') {
+            statusMessage.textContent = message;
+            statusMessage.style.color = color;
+            statusMessage.style.opacity = '1';
+            
+            setTimeout(() => {
+                statusMessage.style.opacity = '0';
+            }, 2500);
+        }
+
+        function getRandomQuote() {
+            return grannyQuotes[Math.floor(Math.random() * grannyQuotes.length)];
+        }
+
+        function loseGame(message) {
+            gameActive = false;
+            comboInProgress = false;
+            clearTimeout(comboTimer);
+            clearInterval(timerInterval);
+            
+            saveHighScore(totalBeersGrabbed);
+            
+            comboSequence.innerHTML = '<span style="color: #EF4444;">Game Over</span>';
+            
+            document.getElementById('gameOverTitle').textContent = 'Game Over!';
+            document.getElementById('gameOverTitle').style.color = '#EF4444';
+            
+            let achievementText = '';
+            if (totalBeersGrabbed === 0) {
+                achievementText = "Couldn't even reach the first beer!";
+            } else if (totalBeersGrabbed <= 3) {
+                achievementText = `Made it to ${totalBeersGrabbed} beer${totalBeersGrabbed > 1 ? 's' : ''}. Not bad for a beginner!`;
+            } else if (totalBeersGrabbed <= 6) {
+                achievementText = `${totalBeersGrabbed} beers! Granny's got some serious skills!`;
+            } else if (totalBeersGrabbed <= 10) {
+                achievementText = `${totalBeersGrabbed} beers! This granny is a legend!`;
+            } else {
+                achievementText = `${totalBeersGrabbed} beers! ABSOLUTELY LEGENDARY! Granny is the ultimate beer crawler!`;
+            }
+            
+            document.getElementById('gameOverText').innerHTML = 
+                `😴 ${message}<br>` +
+                `<strong>Final Score: ${totalBeersGrabbed} beers grabbed!</strong><br>` +
+                `Reached Level ${currentLevel} | Progress: ${progress}%<br>` +
+                `<em>${achievementText}</em><br><br>` +
+                '<em>"Help! I\'ve fallen and I can\'t reach my beer!"</em>';
+            
+            gameOver.style.display = 'block';
+            pauseBtn.style.display = 'none';
+        }
+
+        function restartGame() {
+            gameActive = false;
+            gamePaused = false;
+            comboInProgress = false;
+            clearTimeout(comboTimer);
+            clearInterval(timerInterval);
+            
+            progress = 0;
+            sobriety = SOBRIETY_MAX;
+            playerProgress = 0;
+            currentLevel = 1;
+            totalBeersGrabbed = 0;
+            currentTimePerCombo = BASE_TIME_PER_COMBO;
+            successStreak = 0;
+            failStreak = 0;
+            
+            gameOver.style.display = 'none';
+            pauseScreen.style.display = 'none';
+            comboDisplay.style.display = 'none';
+            startScreen.style.display = 'block';
+            pauseBtn.style.display = 'none';
+            
+            beer.classList.remove('beer-close');
+            statusMessage.style.opacity = '0';
+            timerFill.style.width = '100%';
+            
+            updateDisplay();
+        }
+
+        // Event listeners
+        document.addEventListener('keydown', handleKeyPress);
+
+        // Initialize game
+        updateDisplay();
+        loadHighScores();
+    </script>
+</body>
+</html>
