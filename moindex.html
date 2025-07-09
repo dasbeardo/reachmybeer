@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Daeds' Retro Arcade — Game & Screensaver Hub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Audiowide&family=Orbitron:wght@400;600;700&display=swap" rel="stylesheet">
+  <!-- ── SOCIAL / DISCORD PREVIEW ───────────────────────────── -->
+<meta property="og:title"
+      content="Daeds' Retro Arcade — Mini-Game Hub">
+<meta property="og:description"
+      content="Trippy 90s screensavers, infinite pipe puzzles & a beer-rescue reflex game inspired by great-grandma. Choose your weirdness!">
+<meta property="og:type"  content="website">
+<meta property="og:url"
+      content="https://dasbeardo.github.io/reachmybeer/">
+<meta property="og:image"
+      content="https://dasbeardo.github.io/reachmybeer/assets/preview.png">
+
+<!-- nice-to-haves -->
+
+<meta name="theme-color"         content="#3f51b5"><!-- accent bar in embed -->
+<meta name="twitter:card"        content="summary_large_image">
+<meta name="twitter:title"       content="Daeds' Retro Arcade — Mini-Game Hub">
+<meta name="twitter:description"
+content="Trippy 90s screensavers, infinite pipe puzzles & a beer-rescue reflex game inspired by great-grandma.">
+<meta name="twitter:image"
+content="https://dasbeardo.github.io/reachmybeer/assets/preview.png">
+
+<!-- ────────────────────────────────────────────────────────── -->
+
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #1a1a40 0%, #3f51b5 100%);
+      color: #fff;
+      font-family: 'Orbitron', Arial, sans-serif;
+      min-height: 100vh;
+      box-sizing: border-box;
+    }
+    
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+    
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 0 1rem;
+    }
+    
+    header {
+      margin-top: 3rem;
+      text-align: center;
+    }
+    
+    h1 {
+      font-family: 'Press Start 2P', cursive;
+      font-size: 2.7rem;
+      letter-spacing: 3px;
+      text-shadow: 2px 4px 0 #222, 0 0 10px #90caf9;
+      margin-bottom: 0.4em;
+    }
+    
+    p.intro {
+      font-size: 1.15rem;
+      color: #b3e5fc;
+      max-width: 560px;
+      margin: 0 auto 2em auto;
+      text-shadow: 0 2px 4px #2229;
+    }
+    
+    .games-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 2rem;
+      width: 95%;
+      max-width: 980px;
+      margin: 2.5em auto 2em auto;
+    }
+    
+    .game-card {
+      background: linear-gradient(135deg, #263159 60%, #21204a 100%);
+      border-radius: 1.6rem;
+      box-shadow: 0 8px 36px #000b, 0 1.5px 2px #fff3;
+      padding: 2.2em 1.5em 1.8em 1.5em;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: transform 0.18s, box-shadow 0.18s;
+      border: 3px solid #90caf9bb;
+      position: relative;
+    }
+    
+    .game-card:hover {
+      transform: scale(1.045) rotate(-2deg);
+      box-shadow: 0 12px 36px #222e, 0 2px 16px #90caf9aa;
+      border-color: #ffd600;
+    }
+    
+    .game-title {
+      font-family: 'Press Start 2P', cursive;
+      font-size: 1.08rem;
+      color: #ffd600;
+      letter-spacing: 1px;
+      margin-bottom: 0.6em;
+      text-shadow: 1px 1.5px 0 #212121cc;
+    }
+    
+    .game-desc {
+      font-size: 1.02rem;
+      color: #b3e5fc;
+      text-align: center;
+      margin-bottom: 1.5em;
+      line-height: 1.4;
+      min-height: 3.2em;
+    }
+    
+    .play-btn {
+      background: linear-gradient(90deg, #ffd600 40%, #ff4081 100%);
+      color: #1a1a40;
+      border: none;
+      font-family: 'Press Start 2P', cursive;
+      font-size: 1rem;
+      padding: 0.85em 2.1em;
+      border-radius: 1em;
+      text-decoration: none;
+      cursor: pointer;
+      box-shadow: 0 1.5px 8px #0006;
+      transition: background 0.13s, color 0.13s, box-shadow 0.14s;
+      outline: none;
+      margin-top: auto;
+      letter-spacing: 1px;
+    }
+    
+    .play-btn:hover, .play-btn:focus {
+      background: linear-gradient(90deg, #fff176 40%, #f06292 100%);
+      color: #141231;
+      box-shadow: 0 6px 18px #ffd600bb;
+      text-decoration: underline;
+    }
+    
+    footer {
+      margin-top: auto;
+      margin-bottom: 1.5em;
+      color: #b3e5fc;
+      font-size: 0.99rem;
+      text-shadow: 0 1px 6px #1a1a40bb;
+      letter-spacing: 0.4px;
+      text-align: center;
+      padding: 0 1rem;
+    }
+    
+    /* Mobile fixes - swap to mobile-friendly fonts */
+    @media (max-width: 768px) {
+      h1 {
+        font-family: 'Audiowide', cursive;
+        font-size: 1.8rem;
+        letter-spacing: 2px;
+        line-height: 1.2;
+      }
+      
+      .game-title {
+        font-family: 'Orbitron', sans-serif;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+      
+      .play-btn {
+        font-family: 'Orbitron', sans-serif;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      body {
+        padding: 0 0.5rem;
+      }
+      
+      header {
+        margin-top: 1.5rem;
+      }
+      
+      h1 {
+        font-size: 1.6rem;
+      }
+      
+      p.intro {
+        font-size: 1rem;
+        padding: 0 0.5rem;
+      }
+      
+      .games-grid {
+        grid-template-columns: 1fr;
+        gap: 1.2rem;
+        width: 100%;
+        margin: 1.5em auto 1em auto;
+      }
+      
+      .game-card {
+        padding: 1.5em 1.2em 1.3em 1.2em;
+      }
+      
+      .game-title {
+        font-size: 0.9rem;
+        letter-spacing: 1px;
+        text-align: center;
+        line-height: 1.3;
+      }
+      
+      .game-desc {
+        font-size: 0.95rem;
+        min-height: auto;
+      }
+      
+      .play-btn {
+        font-size: 0.85rem;
+        padding: 0.8em 1.8em;
+        letter-spacing: 1px;
+      }
+    }
+    
+    /* Tablet adjustments */
+    @media (min-width: 481px) and (max-width: 768px) {
+      .games-grid {
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 1.5rem;
+      }
+      
+      .game-card {
+        padding: 1.8em 1.3em 1.5em 1.3em;
+      }
+      
+      .game-title {
+        font-size: 1rem;
+      }
+      
+      .game-desc {
+        font-size: 1rem;
+      }
+      
+      .play-btn {
+        font-size: 0.95rem;
+        padding: 0.8em 1.9em;
+      }
+    }
+    
+    /* Small desktop */
+    @media (min-width: 769px) and (max-width: 1024px) {
+      h1 {
+        font-size: 2.4rem;
+      }
+      
+      .games-grid {
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.8rem;
+      }
+    }
+  </style>
+
+</head>
+<body>
+  <header>
+    <h1>Daeds&rsquo; Retro Arcade</h1>
+    <p class="intro">
+      Welcome to a bizarre digital cabinet of interactive oddities!<br>
+      From trippy screensavers to pipe puzzles to truly questionable life alert parodies, click below and pick your poison.
+    </p>
+  </header>
+  <main>
+    <section class="games-grid">
+      <!-- SAVER -->
+      <div class="game-card">
+        <div class="game-title">Assorted 90s Screensaver</div>
+        <div class="game-desc">
+          Inspired by the wild, weird, and hypnotic screensavers of yesteryear.<br>
+          <b>Think: Flying toasters, neon pipes, and peak nostalgia weirdness.</b>
+        </div>
+        <a class="play-btn" href="saver.html" target="_blank">Fire It Up!</a>
+      </div>
+      <!-- 90s SHAPES -->
+      <div class="game-card">
+        <div class="game-title">80s/90s Shapes Screensaver</div>
+        <div class="game-desc">
+          Geometric chaos! Bouncing shapes and vaporwave colors collide in this tribute to every dentist office and classroom TV.
+        </div>
+        <a class="play-btn" href="90s.html" target="_blank">Get Geometric</a>
+      </div>
+      <!-- PIPE FLOW -->
+      <div class="game-card">
+        <div class="game-title">Infinite Pipe Flow</div>
+        <div class="game-desc">
+          Build endless, mind-bending pipe networks.<br>
+          <b>Zen meets brain-melt.</b> Pipes forever, baby.
+        </div>
+        <a class="play-btn" href="pipeflow.html" target="_blank">Pipe In</a>
+      </div>
+      <!-- BEER ALERT -->
+      <div class="game-card">
+        <div class="game-title">Reach My Beer!</div>
+        <div class="game-desc">
+          A key-combo reflex game inspired by my dearly departed, beer-loving great-grandma.<br>
+          Mash keys in sequence to crawl across the floor, reach your beer, and do it all again.<br>
+          <span style="color: #ff4081; font-size:0.97em;">"HELP! I'VE FALLEN AND I CANT REACH MY BEER!!!!"</span>
+        </div>
+        <a class="play-btn" href="beer.html" target="_blank">Save Grandma!</a>
+      </div>
+      <!-- RINGS -->
+      <div class="game-card">
+        <div class="game-title">RINGS</div>
+        <div class="game-desc">
+          I think I'm tripping out, man.<br>
+          Am I tripping out, man?<br>
+          <span style="color: #ff4081; font-size:0.97em;">I'm losing it, maaan...</span>
+        </div>
+        <a class="play-btn" href="rings.html" target="_blank">RINGS!</a>
+      </div>
+    </section>
+  </main>
+  <footer>
+    &copy; 2025 daeds. <span style="font-size:0.93em;">All games & oddities hand-built by AI and <span style="color:#ffd600;">&#10084;</span> and questionable intelligence.</span>
+  </footer>
+</body>
+</html>
