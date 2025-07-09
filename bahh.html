@@ -1,0 +1,369 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Enhanced gradient definitions -->
+    <radialGradient id="backgroundGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#0a0a1c;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#1a1a2e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2a2a3e;stop-opacity:1" />
+    </radialGradient>
+
+```
+<radialGradient id="sheepGrad" cx="40%" cy="20%" r="80%">
+  <stop offset="0%" style="stop-color:#fafde6;stop-opacity:1" />
+  <stop offset="60%" style="stop-color:#f5f8c8;stop-opacity:1" />
+  <stop offset="100%" style="stop-color:#e0e49a;stop-opacity:1" />
+</radialGradient>
+
+<linearGradient id="hornGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+  <stop offset="0%" style="stop-color:#d94560;stop-opacity:1" />
+  <stop offset="50%" style="stop-color:#c73650;stop-opacity:1" />
+  <stop offset="100%" style="stop-color:#7a1f2a;stop-opacity:1" />
+</linearGradient>
+
+<linearGradient id="eyeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+  <stop offset="0%" style="stop-color:#ff6b7d;stop-opacity:1" />
+  <stop offset="100%" style="stop-color:#e94560;stop-opacity:1" />
+</linearGradient>
+
+<radialGradient id="pentagramGrad" cx="50%" cy="50%" r="50%">
+  <stop offset="0%" style="stop-color:#ff4d6d;stop-opacity:0.8" />
+  <stop offset="100%" style="stop-color:#e94560;stop-opacity:1" />
+</radialGradient>
+
+<!-- Advanced filter effects -->
+<filter id="intenseGlow">
+  <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+  <feMerge> 
+    <feMergeNode in="coloredBlur"/>
+    <feMergeNode in="SourceGraphic"/>
+  </feMerge>
+</filter>
+
+<filter id="shadowDeep">
+  <feDropShadow dx="3" dy="3" stdDeviation="4" flood-color="#000000" flood-opacity="0.7"/>
+</filter>
+
+<filter id="innerShadow">
+  <feOffset in="SourceAlpha" dx="0" dy="0" result="offset"/>
+  <feFlood flood-color="#000000" flood-opacity="0.3"/>
+  <feComposite in2="offset" operator="in"/>
+  <feMerge>
+    <feMergeNode/>
+    <feMergeNode in="SourceGraphic"/>
+  </feMerge>
+</filter>
+
+<!-- Pattern for mystical background texture -->
+<pattern id="mysticalPattern" patternUnits="userSpaceOnUse" width="20" height="20">
+  <rect width="20" height="20" fill="none"/>
+  <circle cx="10" cy="10" r="0.5" fill="#e94560" opacity="0.1">
+    <animate attributeName="opacity" values="0.1;0.3;0.1" dur="6s" repeatCount="indefinite"/>
+  </circle>
+</pattern>
+```
+
+  </defs>
+
+  <!-- Mystical background texture -->
+
+  <rect x="0" y="0" width="200" height="200" fill="url(#mysticalPattern)"/>
+
+  <!-- Animated outer aura -->
+
+  <circle cx="100" cy="100" r="98" fill="none" stroke="#e94560" stroke-width="0.5" opacity="0.3">
+    <animate attributeName="r" values="98;105;98" dur="8s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.2;0.5;0.2" dur="8s" repeatCount="indefinite"/>
+  </circle>
+
+  <!-- Enhanced background circle with depth -->
+
+  <circle cx="100" cy="100" r="95" fill="url(#backgroundGrad)" stroke="#16213e" stroke-width="4" filter="url(#shadowDeep)">
+    <animate attributeName="stroke-width" values="4;6;4" dur="4s" repeatCount="indefinite"/>
+    <animate attributeName="stroke-opacity" values="0.8;1;0.8" dur="4s" repeatCount="indefinite"/>
+  </circle>
+
+  <!-- Multiple rotating decorative circles with varying speeds -->
+
+  <circle cx="100" cy="100" r="88" fill="none" stroke="#e94560" stroke-width="0.8" stroke-dasharray="12,6" opacity="0.4">
+    <animateTransform attributeName="transform" type="rotate" values="0 100 100;360 100 100" dur="25s" repeatCount="indefinite"/>
+  </circle>
+
+  <circle cx="100" cy="100" r="85" fill="none" stroke="#e94560" stroke-width="1" stroke-dasharray="8,4" opacity="0.6">
+    <animateTransform attributeName="transform" type="rotate" values="0 100 100;360 100 100" dur="20s" repeatCount="indefinite"/>
+  </circle>
+
+  <circle cx="100" cy="100" r="80" fill="none" stroke="#e94560" stroke-width="2" stroke-dasharray="5,5" filter="url(#intenseGlow)">
+    <animateTransform attributeName="transform" type="rotate" values="360 100 100;0 100 100" dur="15s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.6;1;0.6" dur="3s" repeatCount="indefinite"/>
+  </circle>
+
+  <circle cx="100" cy="100" r="75" fill="none" stroke="#e94560" stroke-width="1.5" stroke-dasharray="3,7" opacity="0.5">
+    <animateTransform attributeName="transform" type="rotate" values="0 100 100;-360 100 100" dur="12s" repeatCount="indefinite"/>
+  </circle>
+
+  <!-- Enhanced pentagram with complex animations -->
+
+  <g>
+    <polygon points="100,25 115,65 155,65 125,90 135,130 100,105 65,130 75,90 45,65 85,65" 
+             fill="url(#pentagramGrad)" fill-opacity="0.2" stroke="url(#pentagramGrad)" stroke-width="2.5" filter="url(#intenseGlow)">
+      <animate attributeName="stroke-width" values="2.5;4.5;2.5" dur="2s" repeatCount="indefinite"/>
+      <animate attributeName="fill-opacity" values="0.1;0.3;0.1" dur="2s" repeatCount="indefinite"/>
+      <animateTransform attributeName="transform" type="rotate" values="0 100 100;2 100 100;0 100 100" dur="10s" repeatCount="indefinite"/>
+    </polygon>
+
+```
+<!-- Secondary inner pentagram -->
+<polygon points="100,35 110,60 135,60 115,80 122,105 100,90 78,105 85,80 65,60 90,60" 
+         fill="#e94560" fill-opacity="0.15" stroke="#e94560" stroke-width="1.5" opacity="0.8">
+  <animate attributeName="fill-opacity" values="0.1;0.4;0.1" dur="3s" repeatCount="indefinite"/>
+  <animate attributeName="stroke-width" values="1.5;2.5;1.5" dur="3s" repeatCount="indefinite"/>
+</polygon>
+```
+
+  </g>
+
+  <!-- Mystical energy lines connecting pentagram points -->
+
+  <g stroke="#e94560" stroke-width="0.8" opacity="0.5">
+    <line x1="100" y1="25" x2="100" y2="100">
+      <animate attributeName="opacity" values="0.3;0.8;0.3" dur="5s" repeatCount="indefinite"/>
+    </line>
+    <line x1="155" y1="65" x2="100" y2="100">
+      <animate attributeName="opacity" values="0.3;0.8;0.3" dur="5s" begin="1s" repeatCount="indefinite"/>
+    </line>
+    <line x1="135" y1="130" x2="100" y2="100">
+      <animate attributeName="opacity" values="0.3;0.8;0.3" dur="5s" begin="2s" repeatCount="indefinite"/>
+    </line>
+    <line x1="65" y1="130" x2="100" y2="100">
+      <animate attributeName="opacity" values="0.3;0.8;0.3" dur="5s" begin="3s" repeatCount="indefinite"/>
+    </line>
+    <line x1="45" y1="65" x2="100" y2="100">
+      <animate attributeName="opacity" values="0.3;0.8;0.3" dur="5s" begin="4s" repeatCount="indefinite"/>
+    </line>
+  </g>
+
+  <!-- Enhanced central sheep head with advanced details -->
+
+  <g transform="translate(100,100)">
+    <!-- Head with enhanced gradient and breathing animation -->
+    <circle cx="0" cy="-10" r="18" fill="url(#sheepGrad)" stroke="#e94560" stroke-width="1.8" filter="url(#shadowDeep)">
+      <animate attributeName="r" values="18;20;18" dur="4s" repeatCount="indefinite"/>
+      <animate attributeName="stroke-width" values="1.8;2.5;1.8" dur="4s" repeatCount="indefinite"/>
+    </circle>
+
+```
+<!-- Detailed wool texture with individual animations -->
+<circle cx="-12" cy="-18" r="4.5" fill="#f5f8c8" opacity="0.9">
+  <animate attributeName="r" values="4.5;5;4.5" dur="5s" repeatCount="indefinite"/>
+</circle>
+<circle cx="12" cy="-18" r="4.5" fill="#f5f8c8" opacity="0.9">
+  <animate attributeName="r" values="4.5;5;4.5" dur="5s" begin="1s" repeatCount="indefinite"/>
+</circle>
+<circle cx="-10" cy="-8" r="4" fill="#f0f3bd" opacity="0.8">
+  <animate attributeName="r" values="4;4.5;4" dur="6s" repeatCount="indefinite"/>
+</circle>
+<circle cx="10" cy="-8" r="4" fill="#f0f3bd" opacity="0.8">
+  <animate attributeName="r" values="4;4.5;4" dur="6s" begin="2s" repeatCount="indefinite"/>
+</circle>
+<circle cx="0" cy="-2" r="4.5" fill="#f0f3bd" opacity="0.9">
+  <animate attributeName="r" values="4.5;5.5;4.5" dur="7s" repeatCount="indefinite"/>
+</circle>
+<circle cx="-6" cy="-15" r="3" fill="#f0f3bd" opacity="0.7">
+  <animate attributeName="r" values="3;3.5;3" dur="4s" repeatCount="indefinite"/>
+</circle>
+<circle cx="6" cy="-15" r="3" fill="#f0f3bd" opacity="0.7">
+  <animate attributeName="r" values="3;3.5;3" dur="4s" begin="1.5s" repeatCount="indefinite"/>
+</circle>
+
+<!-- Enhanced animated horns with spiral details -->
+<g>
+  <path d="M-12,-20 Q-18,-28 -15,-35 Q-13,-32 -10,-30 L-12,-28 Z" fill="url(#hornGrad)" stroke="#7a1f2a" stroke-width="1" filter="url(#innerShadow)">
+    <animateTransform attributeName="transform" type="rotate" values="0 -12 -20;-3 -12 -20;0 -12 -20" dur="6s" repeatCount="indefinite"/>
+  </path>
+  <path d="M12,-20 Q18,-28 15,-35 Q13,-32 10,-30 L12,-28 Z" fill="url(#hornGrad)" stroke="#7a1f2a" stroke-width="1" filter="url(#innerShadow)">
+    <animateTransform attributeName="transform" type="rotate" values="0 12 -20;3 12 -20;0 12 -20" dur="6s" repeatCount="indefinite"/>
+  </path>
+  
+  <!-- Horn spiral details -->
+  <path d="M-13,-25 Q-15,-30 -14,-33" fill="none" stroke="#7a1f2a" stroke-width="0.8" opacity="0.8"/>
+  <path d="M13,-25 Q15,-30 14,-33" fill="none" stroke="#7a1f2a" stroke-width="0.8" opacity="0.8"/>
+</g>
+
+<!-- Enhanced eyes with complex blinking and glowing -->
+<g>
+  <ellipse cx="-6" cy="-12" rx="3" ry="2.8" fill="#1a1a2e" stroke="#e94560" stroke-width="0.5">
+    <animate attributeName="ry" values="2.8;0.3;2.8;2.8;2.8" dur="6s" repeatCount="indefinite"/>
+  </ellipse>
+  <ellipse cx="6" cy="-12" rx="3" ry="2.8" fill="#1a1a2e" stroke="#e94560" stroke-width="0.5">
+    <animate attributeName="ry" values="2.8;2.8;0.3;2.8;2.8" dur="6s" repeatCount="indefinite"/>
+  </ellipse>
+  
+  <!-- Pupil highlights with movement -->
+  <circle cx="-5.5" cy="-13" r="1" fill="url(#eyeGrad)" filter="url(#intenseGlow)">
+    <animate attributeName="cx" values="-5.5;-5.8;-5.2;-5.5" dur="12s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="6.5" cy="-13" r="1" fill="url(#eyeGrad)" filter="url(#intenseGlow)">
+    <animate attributeName="cx" values="6.5;6.8;6.2;6.5" dur="12s" begin="3s" repeatCount="indefinite"/>
+  </circle>
+  
+  <!-- Eye reflections -->
+  <circle cx="-5" cy="-14" r="0.4" fill="#ffffff" opacity="0.9"/>
+  <circle cx="7" cy="-14" r="0.4" fill="#ffffff" opacity="0.9"/>
+</g>
+
+<!-- Enhanced mystical third eye with complex animation -->
+<g>
+  <circle cx="0" cy="-18" r="2.5" fill="url(#eyeGrad)" filter="url(#intenseGlow)">
+    <animate attributeName="r" values="2.5;3.2;2.5" dur="3s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.9;1;0.9" dur="3s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="0" cy="-18" r="1.5" fill="#ffffff" opacity="0.95">
+    <animate attributeName="r" values="1.5;1.8;1.5" dur="3s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="0" cy="-18" r="0.8" fill="#1a1a2e">
+    <animate attributeName="r" values="0.8;1;0.8" dur="3s" repeatCount="indefinite"/>
+  </circle>
+  
+  <!-- Third eye mystical emanations -->
+  <circle cx="0" cy="-18" r="4" fill="none" stroke="#e94560" stroke-width="0.5" opacity="0.4">
+    <animate attributeName="r" values="4;7;4" dur="4s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.4;0;0.4" dur="4s" repeatCount="indefinite"/>
+  </circle>
+</g>
+
+<!-- Enhanced snout with detailed nostrils -->
+<ellipse cx="0" cy="-5" rx="4" ry="3" fill="#d63851" stroke="#8b2635" stroke-width="0.8" filter="url(#innerShadow)">
+  <animate attributeName="ry" values="3;3.5;3" dur="4s" repeatCount="indefinite"/>
+</ellipse>
+<ellipse cx="-1.2" cy="-5" rx="0.6" ry="1" fill="#7a1f2a"/>
+<ellipse cx="1.2" cy="-5" rx="0.6" ry="1" fill="#7a1f2a"/>
+
+<!-- Snout highlight -->
+<ellipse cx="0" cy="-6.5" rx="1.5" ry="0.8" fill="#ff7b8a" opacity="0.6"/>
+```
+
+  </g>
+
+  <!-- Enhanced shepherd's crooks with ornate details -->
+
+  <g transform="translate(100,100)">
+    <g>
+      <path d="M-25,10 L-25,35 M-25,10 Q-20,5 -15,10 Q-18,12 -20,15" 
+            fill="none" stroke="url(#pentagramGrad)" stroke-width="3.5" stroke-linecap="round" filter="url(#intenseGlow)">
+        <animate attributeName="stroke-width" values="3.5;5;3.5" dur="3s" repeatCount="indefinite"/>
+      </path>
+      <path d="M25,10 L25,35 M25,10 Q20,5 15,10 Q18,12 20,15" 
+            fill="none" stroke="url(#pentagramGrad)" stroke-width="3.5" stroke-linecap="round" filter="url(#intenseGlow)">
+        <animate attributeName="stroke-width" values="3.5;5;3.5" dur="3s" begin="1s" repeatCount="indefinite"/>
+      </path>
+
+```
+  <!-- Crook ornamental details -->
+  <circle cx="-22" cy="20" r="2" fill="#e94560" opacity="0.8" filter="url(#intenseGlow)">
+    <animate attributeName="r" values="2;2.5;2" dur="4s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="22" cy="20" r="2" fill="#e94560" opacity="0.8" filter="url(#intenseGlow)">
+    <animate attributeName="r" values="2;2.5;2" dur="4s" begin="2s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="-22" cy="30" r="1.5" fill="#e94560" opacity="0.6"/>
+  <circle cx="22" cy="30" r="1.5" fill="#e94560" opacity="0.6"/>
+  
+  <!-- Crook binding details -->
+  <rect x="-26" y="18" width="2" height="1" fill="#e94560" opacity="0.7"/>
+  <rect x="-26" y="22" width="2" height="1" fill="#e94560" opacity="0.7"/>
+  <rect x="24" y="18" width="2" height="1" fill="#e94560" opacity="0.7"/>
+  <rect x="24" y="22" width="2" height="1" fill="#e94560" opacity="0.7"/>
+</g>
+```
+
+  </g>
+
+  <!-- Enhanced mystical runes with individual complex animations -->
+
+  <g fill="url(#pentagramGrad)" font-family="serif" font-size="16" text-anchor="middle" font-weight="bold" filter="url(#intenseGlow)">
+    <text x="100" y="20">Ω
+      <animate attributeName="opacity" values="0.6;1;0.6" dur="2s" repeatCount="indefinite"/>
+      <animate attributeName="font-size" values="16;20;16" dur="4s" repeatCount="indefinite"/>
+      <animateTransform attributeName="transform" type="rotate" values="0 100 20;8 100 20;0 100 20" dur="6s" repeatCount="indefinite"/>
+    </text>
+    <text x="155" y="75">Ψ
+      <animate attributeName="opacity" values="0.6;1;0.6" dur="2s" begin="0.4s" repeatCount="indefinite"/>
+      <animate attributeName="font-size" values="16;20;16" dur="4s" begin="0.8s" repeatCount="indefinite"/>
+      <animateTransform attributeName="transform" type="rotate" values="72 155 75;80 155 75;72 155 75" dur="6s" repeatCount="indefinite"/>
+    </text>
+    <text x="135" y="155">Φ
+      <animate attributeName="opacity" values="0.6;1;0.6" dur="2s" begin="0.8s" repeatCount="indefinite"/>
+      <animate attributeName="font-size" values="16;20;16" dur="4s" begin="1.6s" repeatCount="indefinite"/>
+      <animateTransform attributeName="transform" type="rotate" values="144 135 155;152 135 155;144 135 155" dur="6s" repeatCount="indefinite"/>
+    </text>
+    <text x="65" y="155">Δ
+      <animate attributeName="opacity" values="0.6;1;0.6" dur="2s" begin="1.2s" repeatCount="indefinite"/>
+      <animate attributeName="font-size" values="16;20;16" dur="4s" begin="2.4s" repeatCount="indefinite"/>
+      <animateTransform attributeName="transform" type="rotate" values="216 65 155;224 65 155;216 65 155" dur="6s" repeatCount="indefinite"/>
+    </text>
+    <text x="45" y="75">Λ
+      <animate attributeName="opacity" values="0.6;1;0.6" dur="2s" begin="1.6s" repeatCount="indefinite"/>
+      <animate attributeName="font-size" values="16;20;16" dur="4s" begin="3.2s" repeatCount="indefinite"/>
+      <animateTransform attributeName="transform" type="rotate" values="288 45 75;296 45 75;288 45 75" dur="6s" repeatCount="indefinite"/>
+    </text>
+  </g>
+
+  <!-- Enhanced bottom banner with ornate design -->
+
+  <g>
+    <rect x="20" y="166" width="160" height="28" fill="url(#backgroundGrad)" stroke="url(#pentagramGrad)" stroke-width="2" rx="4" filter="url(#shadowDeep)">
+      <animate attributeName="stroke-width" values="2;3;2" dur="4s" repeatCount="indefinite"/>
+    </rect>
+
+```
+<!-- Banner decorative corners -->
+<polygon points="25,166 30,161 35,166" fill="#e94560" opacity="0.6"/>
+<polygon points="165,166 170,161 175,166" fill="#e94560" opacity="0.6"/>
+<polygon points="25,194 30,199 35,194" fill="#e94560" opacity="0.6"/>
+<polygon points="165,194 170,199 175,194" fill="#e94560" opacity="0.6"/>
+
+<text x="100" y="185" text-anchor="middle" fill="url(#pentagramGrad)" font-family="serif" font-size="12" font-weight="bold" filter="url(#intenseGlow)">
+  CULT OF SHEEPGIDON
+  <animate attributeName="opacity" values="0.8;1;0.8" dur="3s" repeatCount="indefinite"/>
+  <animate attributeName="font-size" values="12;13;12" dur="5s" repeatCount="indefinite"/>
+</text>
+```
+
+  </g>
+
+  <!-- Enhanced decorative flourishes with complex patterns -->
+
+  <g stroke="url(#pentagramGrad)" stroke-width="2" fill="none" filter="url(#intenseGlow)">
+    <path d="M10,180 Q15,175 20,180 Q15,185 10,180 M12,177 Q15,174 18,177">
+      <animate attributeName="opacity" values="0.5;1;0.5" dur="3s" repeatCount="indefinite"/>
+    </path>
+    <path d="M180,180 Q185,175 190,180 Q185,185 180,180 M182,177 Q185,174 188,177">
+      <animate attributeName="opacity" values="0.5;1;0.5" dur="3s" begin="1.5s" repeatCount="indefinite"/>
+    </path>
+  </g>
+
+  <!-- Enhanced mystical energy particles with trails -->
+
+  <g>
+    <circle cx="60" cy="45" r="1.2" fill="url(#eyeGrad)" opacity="0.8" filter="url(#intenseGlow)">
+      <animate attributeName="opacity" values="0;0.9;0" dur="5s" repeatCount="indefinite"/>
+      <animate attributeName="r" values="1.2;2;1.2" dur="5s" repeatCount="indefinite"/>
+      <animateTransform attributeName="transform" type="translate" values="0,0;12,-12;0,0" dur="5s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="140" cy="55" r="1.2" fill="url(#eyeGrad)" opacity="0.8" filter="url(#intenseGlow)">
+      <animate attributeName="opacity" values="0;0.9;0" dur="5s" begin="1.25s" repeatCount="indefinite"/>
+      <animate attributeName="r" values="1.2;2;1.2" dur="5s" repeatCount="indefinite"/>
+      <animateTransform attributeName="transform" type="translate" values="0,0;-12,-12;0,0" dur="5s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="170" cy="125" r="1.2" fill="url(#eyeGrad)" opacity="0.8" filter="url(#intenseGlow)">
+      <animate attributeName="opacity" values="0;0.9;0" dur="5s" begin="2.5s" repeatCount="indefinite"/>
+      <animate attributeName="r" values="1.2;2;1.2" dur="5s" repeatCount="indefinite"/>
+      <animateTransform attributeName="transform" type="translate" values="0,0;-6,10;0,0" dur="5s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="30" cy="135" r="1.2" fill="url(#eyeGrad)" opacity="0.8" filter="url(#intenseGlow)">
+      <animate attributeName="opacity" values="0;0.9;0" dur="5s" begin="3.75s" repeatCount="indefinite"/>
+      <animate attributeName="r" values="1.2;2;1.2" dur="5s" repeatCount="indefinite"/>
+      <animateTransform attributeName="transform" type="translate" values="0,0;6,10;0,0" dur="5s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+</svg>
