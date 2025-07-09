@@ -19,8 +19,7 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            padding: 10px;
-            overflow-x: hidden;
+            overflow: hidden;
         }
 
         .game-container {
@@ -29,8 +28,6 @@
             padding: 20px;
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
             backdrop-filter: blur(10px);
-            width: 100%;
-            max-width: 700px;
         }
 
         .header {
@@ -39,7 +36,7 @@
         }
 
         h1 {
-            font-size: clamp(1.5rem, 4vw, 2.5rem);
+            font-size: 2.5em;
             margin-bottom: 10px;
             text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
             background: linear-gradient(45deg, #00f2fe, #4facfe);
@@ -53,7 +50,6 @@
             justify-content: space-around;
             margin-bottom: 20px;
             gap: 20px;
-            flex-wrap: wrap;
         }
 
         .stat {
@@ -62,16 +58,15 @@
             border-radius: 10px;
             text-align: center;
             flex: 1;
-            min-width: 80px;
         }
 
         .stat-label {
-            font-size: clamp(0.7rem, 2vw, 0.9rem);
+            font-size: 0.9em;
             opacity: 0.8;
         }
 
         .stat-value {
-            font-size: clamp(1rem, 3vw, 1.5rem);
+            font-size: 1.5em;
             font-weight: bold;
             margin-top: 5px;
         }
@@ -83,8 +78,6 @@
             display: block;
             margin: 0 auto;
             background: rgba(0, 0, 0, 0.2);
-            max-width: 100%;
-            height: auto;
         }
 
         .controls {
@@ -92,7 +85,6 @@
             justify-content: center;
             gap: 10px;
             margin-top: 20px;
-            flex-wrap: wrap;
         }
 
         button {
@@ -101,14 +93,11 @@
             color: white;
             padding: 12px 24px;
             border-radius: 50px;
-            font-size: clamp(0.8rem, 2vw, 1rem);
+            font-size: 1em;
             font-weight: bold;
             cursor: pointer;
             transition: all 0.3s ease;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            flex: 1;
-            min-width: 100px;
-            max-width: 150px;
         }
 
         button:hover {
@@ -123,7 +112,7 @@
         .message {
             text-align: center;
             margin-top: 15px;
-            font-size: clamp(0.9rem, 2.5vw, 1.2rem);
+            font-size: 1.2em;
             height: 30px;
             transition: all 0.3s ease;
         }
@@ -141,42 +130,6 @@
             height: 100%;
             pointer-events: none;
             z-index: -1;
-        }
-
-        /* Mobile adjustments */
-        @media (max-width: 768px) {
-            body {
-                padding: 5px;
-            }
-            
-            .game-container {
-                padding: 15px;
-            }
-            
-            .stats {
-                gap: 10px;
-            }
-            
-            .controls {
-                gap: 8px;
-            }
-            
-            button {
-                padding: 10px 20px;
-                min-width: 80px;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .controls {
-                flex-direction: column;
-                align-items: center;
-            }
-            
-            button {
-                width: 100%;
-                max-width: 200px;
-            }
         }
     </style>
 </head>
@@ -203,7 +156,7 @@
             </div>
         </div>
         
-        <canvas id="gameCanvas"></canvas>
+        <canvas id="gameCanvas" width="600" height="600"></canvas>
         
         <div class="controls">
             <button onclick="game.generateNewLevel()">New Level</button>
@@ -219,12 +172,8 @@
         const particlesCanvas = document.getElementById('particles');
         const particlesCtx = particlesCanvas.getContext('2d');
         
-        function resizeParticlesCanvas() {
-            particlesCanvas.width = window.innerWidth;
-            particlesCanvas.height = window.innerHeight;
-        }
-        
-        resizeParticlesCanvas();
+        particlesCanvas.width = window.innerWidth;
+        particlesCanvas.height = window.innerHeight;
         
         const particles = [];
         
@@ -244,6 +193,21 @@
                 
                 if (this.x < 0 || this.x > particlesCanvas.width) this.speedX *= -1;
                 if (this.y < 0 || this.y > particlesCanvas.height) this.speedY *= -1;
+            }
+            
+            showSolution() {
+                // Set all solution pipes to their correct rotations
+                for (let y = 0; y < this.gridSize; y++) {
+                    for (let x = 0; x < this.gridSize; x++) {
+                        const pipe = this.grid[y][x];
+                        if (pipe && pipe.isPartOfSolution && this.solutionRotations[`${x},${y}`] !== undefined) {
+                            pipe.rotation = this.solutionRotations[`${x},${y}`];
+                        }
+                    }
+                }
+                
+                this.draw();
+                this.showMessage('Puzzle solved! (Debug mode)', 'success');
             }
             
             draw() {
@@ -269,12 +233,13 @@
         
         animateParticles();
         
-        // Main game - BACK TO YOUR ORIGINAL WORKING CODE
+        // Main game
         class PipePuzzleGame {
             constructor() {
                 this.canvas = document.getElementById('gameCanvas');
                 this.ctx = this.canvas.getContext('2d');
                 this.gridSize = 8;
+                this.cellSize = this.canvas.width / this.gridSize;
                 this.grid = [];
                 this.level = 1;
                 this.score = 0;
@@ -301,16 +266,12 @@
             }
             
             init() {
-                this.resizeCanvas();
                 this.generateNewLevel();
                 
                 this.canvas.addEventListener('click', (e) => {
                     const rect = this.canvas.getBoundingClientRect();
-                    const scaleX = this.canvas.width / rect.width;
-                    const scaleY = this.canvas.height / rect.height;
-                    
-                    const x = Math.floor(((e.clientX - rect.left) * scaleX) / this.cellSize);
-                    const y = Math.floor(((e.clientY - rect.top) * scaleY) / this.cellSize);
+                    const x = Math.floor((e.clientX - rect.left) / this.cellSize);
+                    const y = Math.floor((e.clientY - rect.top) / this.cellSize);
                     this.rotatePipe(x, y);
                 });
                 
@@ -318,27 +279,10 @@
                 this.animate();
             }
             
-            resizeCanvas() {
-                // Calculate optimal size based on container and screen
-                const container = this.canvas.parentElement;
-                const maxSize = Math.min(
-                    container.clientWidth - 40,
-                    window.innerHeight - 250,
-                    600
-                );
-                
-                this.canvas.width = maxSize;
-                this.canvas.height = maxSize;
-                this.canvas.style.width = maxSize + 'px';
-                this.canvas.style.height = maxSize + 'px';
-                
-                this.cellSize = maxSize / this.gridSize;
-            }
-            
             generateNewLevel() {
                 // Increase grid size every 5 levels
                 this.gridSize = Math.min(8 + Math.floor(this.level / 5), 12);
-                this.resizeCanvas();
+                this.cellSize = this.canvas.width / this.gridSize;
                 
                 // Initialize empty grid
                 this.grid = Array(this.gridSize).fill().map(() => 
@@ -936,50 +880,41 @@
                     
                     this.draw();
                     
-                    // Draw flow - fixed to follow actual path
+                    // Draw flow
                     this.ctx.strokeStyle = '#00f2fe';
                     this.ctx.lineWidth = 4;
                     this.ctx.lineCap = 'round';
                     this.ctx.shadowBlur = 20;
                     this.ctx.shadowColor = '#00f2fe';
                     
-                    const currentLength = (path.length - 1) * progress;
+                    this.ctx.beginPath();
+                    const currentLength = path.length * progress;
                     
-                    for (let i = 0; i < Math.floor(currentLength); i++) {
+                    for (let i = 0; i < currentLength - 1; i++) {
                         const start = path[i];
-                        const end = path[i + 1];
+                        const end = path[Math.min(i + 1, path.length - 1)];
                         
                         const startX = start.x * this.cellSize + this.cellSize / 2;
                         const startY = start.y * this.cellSize + this.cellSize / 2;
                         const endX = end.x * this.cellSize + this.cellSize / 2;
                         const endY = end.y * this.cellSize + this.cellSize / 2;
                         
-                        this.ctx.beginPath();
-                        this.ctx.moveTo(startX, startY);
-                        this.ctx.lineTo(endX, endY);
-                        this.ctx.stroke();
+                        if (i === 0) {
+                            this.ctx.moveTo(startX, startY);
+                        }
+                        
+                        if (i < currentLength - 1) {
+                            this.ctx.lineTo(endX, endY);
+                        } else {
+                            // Partial line for smooth animation
+                            const partialProgress = currentLength - i - 1;
+                            const partialX = startX + (endX - startX) * partialProgress;
+                            const partialY = startY + (endY - startY) * partialProgress;
+                            this.ctx.lineTo(partialX, partialY);
+                        }
                     }
                     
-                    // Partial segment for smooth animation
-                    if (Math.floor(currentLength) < path.length - 1) {
-                        const segmentProgress = currentLength - Math.floor(currentLength);
-                        const start = path[Math.floor(currentLength)];
-                        const end = path[Math.floor(currentLength) + 1];
-                        
-                        const startX = start.x * this.cellSize + this.cellSize / 2;
-                        const startY = start.y * this.cellSize + this.cellSize / 2;
-                        const endX = end.x * this.cellSize + this.cellSize / 2;
-                        const endY = end.y * this.cellSize + this.cellSize / 2;
-                        
-                        const partialX = startX + (endX - startX) * segmentProgress;
-                        const partialY = startY + (endY - startY) * segmentProgress;
-                        
-                        this.ctx.beginPath();
-                        this.ctx.moveTo(startX, startY);
-                        this.ctx.lineTo(partialX, partialY);
-                        this.ctx.stroke();
-                    }
-                    
+                    this.ctx.stroke();
                     this.ctx.shadowBlur = 0;
                     
                     requestAnimationFrame(animate);
@@ -1316,9 +1251,8 @@
         
         // Handle window resize
         window.addEventListener('resize', () => {
-            resizeParticlesCanvas();
-            game.resizeCanvas();
-            game.draw();
+            particlesCanvas.width = window.innerWidth;
+            particlesCanvas.height = window.innerHeight;
         });
     </script>
 </body>
