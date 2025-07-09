@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Infinite Pipe Puzzler</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+:root{
+  --bg:#111;
+  --pipe:#ddd;
+  --flow:#28f;
+  --source:#6f6;
+  --sink:#f66;
+  --ui:#fff;
+  font-family:system-ui,Arial,sans-serif;
+}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ui);display:flex;flex-direction:column;align-items:center;}
+#hud{padding:.5rem;font-size:clamp(14px,3vw,20px);user-select:none}
+canvas{touch-action:none;display:block}
+button{background:#222;border:1px solid #444;color:var(--ui);padding:.4rem .8rem;font-size:1rem;border-radius:4px}
+</style>
+</head>
+<body>
+<div id="hud">
+  Level <span id="level">1</span> — Moves <span id="moves">0</span>
+  <button id="reset">↻ Restart</button>
+</div>
+<canvas id="game"></canvas>
+
+<script>
+/* =========  utilities  ========= */
+const PRNG = seed => () => (2**31-1 & (seed=Math.imul(seed,48271))) / 2**31;
+const dirs = [[0,-1],[1,0],[0,1],[-1,0]];              // N,E,S,W
+const rotMask = (m,r)=>(m<<r|m>>((4-r)))&15;            // rotate 4-bit mask
+const randInt =(rng,n)=>Math.floor(rng()*n);
+
+/* =========  piece catalogue  ========= */
+const pieces = {
+  straight : 0b0101,    // E - W
+  corner   : 0b0011,    // S - E
+  tee      : 0b0111,    // N missing
+  cross    : 0b1111,
+  source   : 0b0001,    // overwritten before play (single port)
+  sink     : 0b0001,
+  block    : 0b0000
+};
+function maskToKind(m){
+  const c = [1,2,4,8].filter(b=>m&b).length;
+  if(c===4) return 'cross';
+  if(c===3) return 'tee';
+  if(c===2) return (m===5||m===10)?'straight':'corner';
+  if(c===1) return 'block';          // should not happen
+}
+/* =========  globals  ========= */
+let level=1,moves=0,rng;
+let rows,cols,grid,tile,canvas,ctx,hudLevel,hudMoves;
+
+/* =========  grid helpers  ========= */
+function inBounds(x,y){return x>=0&&y>=0&&x<cols&&y<rows;}
+function rotatePiece(cell){ cell.rot = (cell.rot+1)&3; }
+
+function neighbor(x,y,d){ return [x+dirs[d][0],y+dirs[d][1]]; }
+
+function isConnected(x,y,d){       // open port from (x,y) toward dir d ?
+  const m = rotMask(pieces[grid[y][x].kind],grid[y][x].rot);
+  return m & (1<<d);
+}
+function flood(){                  // returns true if sink reached
+  const open=[[srcX,srcY]], seen=Array(rows).fill(0).map(()=>Array(cols).fill(false));
+  seen[srcY][srcX]=true;
+  while(open.length){
+    const [x,y]=open.pop();
+    if(x===sinkX && y===sinkY) return true;
+    for(let d=0;d<4;++d){
+      if(!isConnected(x,y,d)) continue;
+      const [nx,ny]=neighbor(x,y,d);
+      if(!inBounds(nx,ny)||seen[ny][nx]) continue;
+      const od=(d+2)&3;                      // opposite dir
+      if(!isConnected(nx,ny,od)) continue;
+      seen[ny][nx]=true; open.push([nx,ny]);
+    }
+  }
+  return false;
+}
+
+/* =========  generator  ========= */
+let srcX,srcY,sinkX,sinkY;
+function genLevel(idx){
+  rng = PRNG(idx*99991+12345);
+  rows = cols = Math.min(6+Math.floor(idx/4),18);       // grow up to 18×18
+  grid = Array(rows).fill(0).map(()=>Array(cols));
+  // carve DFS spanning tree
+  const st = [], visited = Array(rows).fill(0).map(()=>Array(cols).fill(false));
+  const path=[];
+  let cx=randInt(rng,cols), cy=randInt(rng,rows);
+  st.push([cx,cy]);
+  while(st.length){
+    [cx,cy]=st.pop();
+    if(visited[cy][cx]) continue;
+    visited[cy][cx]=true; path.push([cx,cy]);
+    const neigh = dirs.map((v,i)=>[cx+v[0],cy+v[1],i]).filter(([x,y])=>inBounds(x,y)&&!visited[y][x]);
+    shuffle(neigh,rng);
+    neigh.forEach(n=>st.push([n[0],n[1]]));
+  }
+  // choose source/sink = farthest pair on perimeter along path order
+  const perim = path.filter(([x,y])=>x===0||y===0||x===cols-1||y===rows-1);
+  srcX = perim[0][0]; srcY = perim[0][1];
+  sinkX= perim[perim.length-1][0]; sinkY=perim[perim.length-1][1];
+
+  // establish connections along route
+  const connectMap = Array(rows).fill(0).map(()=>Array(cols).fill(0));
+  for(let i=0;i<path.length-1;++i){
+    const [ax,ay]=path[i], [bx,by]=path[i+1];
+    const dir = dirs.findIndex(([dx,dy])=>ax+dx===bx&&ay+dy===by);
+    connectMap[ay][ax]|=1<<dir;
+    connectMap[by][bx]|=1<<((dir+2)&3);
+  }
+  // place pieces according to connect map
+  for(let y=0;y<rows;++y)for(let x=0;x<cols;++x){
+    const m=connectMap[y][x];
+    let kind,rot=0;
+    if(x===srcX&&y===srcY){ kind='source'; rot=0; }
+    else if(x===sinkX&&y===sinkY){ kind='sink'; rot=0; }
+    else if(m){ kind=maskToKind(m); rot=0; }
+    else{ kind='block'; rot=0; }
+    grid[y][x]={kind,rot};
+  }
+  // sprinkle noise / branches
+  const noiseDensity=Math.min(0.15+idx*0.002,0.3);      // up to 30 %
+  for(let y=0;y<rows;++y)for(let x=0;x<cols;++x){
+    if(grid[y][x].kind==='block' && rng()<noiseDensity){
+      const kinds=['straight','corner','tee','cross'];
+      grid[y][x]={kind:kinds[randInt(rng,kinds.length)],rot:randInt(rng,4)};
+    }
+  }
+  // set correct orientation for source/sink toward path
+  grid[srcY][srcX].rot = portRot(connectMap[srcY][srcX]);
+  grid[sinkY][sinkX].rot= portRot(connectMap[sinkY][sinkX]);
+  // randomize rotations for every other pipe
+  for(let y=0;y<rows;++y)for(let x=0;x<cols;++x){
+    const cell=grid[y][x];
+    if(cell.kind!=='source'&&cell.kind!=='sink')
+      cell.rot=randInt(rng,4);
+  }
+  // ensure not already solved
+  if(flood()) scrambleUntilUnsolved();
+}
+function portRot(mask){          // rotation that makes single-port mask point outward
+  if(mask&1) return 2;           // N → need port South (rot 180)
+  if(mask&2) return 3;           // E → need port West (rot 270)
+  if(mask&4) return 0;           // S → port South already
+  if(mask&8) return 1;           // W → port East (rot 90)
+  return 0;
+}
+function scrambleUntilUnsolved(){
+  let tries=0;
+  while(flood()&&tries<1000){
+    for(let y=0;y<rows;++y)for(let x=0;x<cols;++x){
+      const c=grid[y][x];
+      if(c.kind!=='source'&&c.kind!=='sink') c.rot=randInt(rng,4);
+    }
+    ++tries;
+  }
+}
+/* =========  shuffle  ========= */
+function shuffle(arr,rng){
+  for(let i=arr.length-1;i>0;--i){
+    const j=randInt(rng,i+1);
+    [arr[i],arr[j]]=[arr[j],arr[i]];
+  }
+}
+
+/* =========  drawing  ========= */
+function resize(){
+  const vw=window.innerWidth, vh=window.innerHeight-60; // hud height approx
+  tile = Math.floor(Math.min(vw/cols, vh/rows));
+  canvas.width = tile*cols*devicePixelRatio;
+  canvas.height= tile*rows*devicePixelRatio;
+  ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+  draw();
+}
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  for(let y=0;y<rows;++y)for(let x=0;x<cols;++x){
+    const cell=grid[y][x];
+    ctx.save();
+    ctx.translate(x*tile+tile/2,y*tile+tile/2);
+    ctx.rotate(cell.rot*Math.PI/2);
+    drawPiece(cell.kind);
+    ctx.restore();
+  }
+}
+function drawPiece(kind){
+  const w=tile*.8, s=tile*.18;
+  ctx.lineCap='round';
+  ctx.lineWidth=s;
+  ctx.strokeStyle=pipeColor(kind);
+  ctx.beginPath();
+  switch(kind){
+    case'straight': ctx.moveTo(-w/2,0); ctx.lineTo(w/2,0); break;
+    case'corner': ctx.arc(-w/2+ s/2,-w/2+ s/2,w-s/2,0,Math.PI/2,false); break;
+    case'tee': ctx.moveTo(-w/2,0); ctx.lineTo(w/2,0);
+                ctx.moveTo(0,0); ctx.lineTo(0,-w/2); break;
+    case'cross': ctx.moveTo(-w/2,0); ctx.lineTo(w/2,0);
+                 ctx.moveTo(0,-w/2); ctx.lineTo(0,w/2); break;
+    case'source': ctx.moveTo(0,0); ctx.lineTo(w/2,0); break;
+    case'sink':   ctx.moveTo(-w/2,0); ctx.lineTo(0,0); break;
+    case'block': default: break;
+  }
+  ctx.stroke();
+  if(kind==='sink'){             // little circle
+    ctx.fillStyle=pipeColor(kind);
+    ctx.beginPath(); ctx.arc(0,0,s*0.8,0,Math.PI*2); ctx.fill();
+  }
+}
+function pipeColor(kind){
+  if(kind==='source') return 'var(--source)';
+  if(kind==='sink')   return 'var(--sink)';
+  return 'var(--pipe)';
+}
+
+/* =========  input  ========= */
+canvas.addEventListener('pointerdown',e=>{
+  const rect=canvas.getBoundingClientRect();
+  const x=Math.floor((e.clientX-rect.left)/tile),
+        y=Math.floor((e.clientY-rect.top )/tile);
+  if(!inBounds(x,y)) return;
+  const cell=grid[y][x];
+  if(cell.kind==='block')return;
+  rotatePiece(cell);
+  ++moves; hudMoves.textContent=moves;
+  draw();
+  if(flood()) setTimeout(()=>nextLevel(),300);
+});
+
+/* =========  progression  ========= */
+function nextLevel(){
+  ++level; moves=0;
+  hudLevel.textContent=level;
+  hudMoves.textContent=moves;
+  genLevel(level);
+  resize();
+}
+/* =========  boot  ========= */
+window.addEventListener('DOMContentLoaded',()=>{
+  canvas=document.getElementById('game');
+  ctx=canvas.getContext('2d');
+  hudLevel=document.getElementById('level');
+  hudMoves=document.getElementById('moves');
+  document.getElementById('reset').onclick=()=>{moves=0;hudMoves.textContent=0;genLevel(level);resize();};
+  genLevel(level);
+  resize();
+  window.addEventListener('resize',resize);
+});
+</script>
+</body>
+</html>
