@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Pipe Puzzle</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: auto;
+            touch-action: manipulation; /* Prevent double-tap zoom on mobile */
+        }
+        #game-container {
+            text-align: center;
+            padding: 10px;
+        }
+        #grid {
+            display: grid;
+            gap: 2px;
+            background: #333;
+            padding: 5px;
+            border-radius: 8px;
+            width: 90vw;
+            max-width: 500px;
+            aspect-ratio: 1;
+        }
+        .tile {
+            background: #555;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            transition: transform 0.2s;
+        }
+        .tile img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        .tile.start { background: #0f0; }
+        .tile.end { background: #f00; }
+        .tile.connected { background: #0af; }
+        #info {
+            margin: 10px 0;
+            font-size: 1.2em;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 1em;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            background: #007bff;
+            color: #fff;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        button:hover { background: #0056b3; }
+        @media (max-width: 600px) {
+            #info { font-size: 1em; }
+            button { font-size: 0.9em; padding: 8px 16px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="info">Level: 1 | Moves: 0</div>
+        <div id="grid"></div>
+        <button onclick="resetLevel()">Reset</button>
+        <button onclick="getHint()">Hint</button>
+    </div>
+    <script>
+        const gridElement = document.getElementById('grid');
+        const infoElement = document.getElementById('info');
+        let level = 1, moves = 0, gridSize, grid, start, end, tiles;
+        const tileTypes = {
+            'straight': ['ud', 'lr'], // Up-Down, Left-Right
+            'elbow': ['ur', 'rd', 'dl', 'lu'], // Up-Right, Right-Down, Down-Left, Left-Up
+            'tee': ['urd', 'rdl', 'dlu', 'lur'], // Up-Right-Down, etc.
+            'cross': ['urdl'] // All directions
+        };
+
+        function initGame() {
+            gridSize = Math.min(3 + Math.floor(level / 5), 10); // 3x3 to 10x10
+            grid = Array(gridSize).fill().map(() => Array(gridSize).fill(null));
+            moves = 0;
+            generateLevel();
+            renderGrid();
+            updateInfo();
+        }
+
+        function generateLevel() {
+            // Clear grid
+            grid = grid.map(row => row.fill(null));
+            // Random start and end on edges
+            const edges = ['top', 'bottom', 'left', 'right'];
+            const startEdge = edges[Math.floor(Math.random() * 4)];
+            const endEdge = edges.filter(e => e !== startEdge)[Math.floor(Math.random() * 3)];
+            start = getEdgePoint(startEdge);
+            end = getEdgePoint(endEdge);
+            grid[start.row][start.col] = { type: 'start', connections: getStartEndConnections(startEdge), rotation: 0 };
+            grid[end.row][end.col] = { type: 'end', connections: getStartEndConnections(endEdge), rotation: 0 };
+
+            // Generate a valid path using A*
+            const path = findPath(start, end);
+            if (!path) return generateLevel(); // Retry if no path found
+
+            // Place path tiles
+            path.forEach(({ row, col }) => {
+                if (grid[row][col]) return; // Skip start/end
+                const availableTypes = level < 5 ? ['straight', 'elbow'] : level < 10 ? ['straight', 'elbow', 'tee'] : ['straight', 'elbow', 'tee', 'cross'];
+                const type = availableTypes[Math.floor(Math.random() * availableTypes.length)];
+                const connections = getTileConnections(row, col, path);
+                grid[row][col] = { type, connections, rotation: 0 };
+            });
+
+            // Fill remaining tiles with random types
+            for (let r = 0; r < gridSize; r++) {
+                for (let c = 0; c < gridSize; c++) {
+                    if (!grid[r][c]) {
+                        const type = level < 10 ? ['straight', 'elbow'][Math.floor(Math.random() * 2)] : ['straight', 'elbow', 'tee', 'cross'][Math.floor(Math.random() * 4)];
+                        const variants = tileTypes[type];
+                        grid[r][c] = { type, connections: variants[Math.floor(Math.random() * variants.length)], rotation: Math.floor(Math.random() * 4) * 90 };
+                    }
+                }
+            }
+
+            // Randomly rotate path tiles for difficulty
+            path.forEach(({ row, col }) => {
+                if (grid[row][col].type !== 'start' && grid[row][col].type !== 'end') {
+                    grid[row][col].rotation = Math.floor(Math.random() * 4) * 90;
+                }
+            });
+
+            // Add obstacles for higher levels
+            if (level > 10) {
+                const obstacleCount = Math.floor(level / 10);
+                for (let i = 0; i < obstacleCount && i < gridSize * gridSize / 4; i++) {
+                    let r, c;
+                    do {
+                        r = Math.floor(Math.random() * gridSize);
+                        c = Math.floor(Math.random() * gridSize);
+                    } while (grid[r][c] && (grid[r][c].type === 'start' || grid[r][c].type === 'end' || path.some(p => p.row === r && p.col === c)));
+                    grid[r][c] = { type: 'block', connections: '', rotation: 0 };
+                }
+            }
+        }
+
+        function getEdgePoint(edge) {
+            if (edge === 'top') return { row: 0, col: Math.floor(Math.random() * gridSize) };
+            if (edge === 'bottom') return { row: gridSize - 1, col: Math.floor(Math.random() * gridSize) };
+            if (edge === 'left') return { row: Math.floor(Math.random() * gridSize), col: 0 };
+            return { row: Math.floor(Math.random() * gridSize), col: gridSize - 1 };
+        }
+
+        function getStartEndConnections(edge) {
+            if (edge === 'top') return 'd';
+            if (edge === 'bottom') return 'u';
+            if (edge === 'left') return 'r';
+            return 'l';
+        }
+
+        function getTileConnections(row, col, path) {
+            const prev = path[path.findIndex(p => p.row === row && p.col === col) - 1];
+            const next = path[path.findIndex(p => p.row === row && p.col === col) + 1];
+            let connections = '';
+            if (prev?.row < row) connections += 'u';
+            if (prev?.row > row) connections += 'd';
+            if (prev?.col < col) connections += 'l';
+            if (prev?.col > col) connections += 'r';
+            if (next?.row < row) connections += 'u';
+            if (next?.row > row) connections += 'd';
+            if (next?.col < col) connections += 'l';
+            if (next?.col > col) connections += 'r';
+            const uniqueConnections = [...new Set(connections.split(''))].join('');
+            return tileTypes[Object.keys(tileTypes).find(type => tileTypes[type].includes(uniqueConnections))] || tileTypes['straight'][0];
+        }
+
+        function findPath(start, end) {
+            const queue = [{ pos: start, path: [start] }];
+            const visited = new Set([`${start.row},${start.col}`]);
+            const directions = [[-1, 0, 'u', 'd'], [1, 0, 'd', 'u'], [0, -1, 'l', 'r'], [0, 1, 'r', 'l']];
+
+            while (queue.length) {
+                const { pos, path } = queue.shift();
+                if (pos.row === end.row && pos.col === end.col) return path;
+
+                for (const [dr, dc, fromDir, toDir] of directions) {
+                    const newRow = pos.row + dr, newCol = pos.col + dc;
+                    if (newRow >= 0 && newRow < gridSize && newCol >= 0 && newCol < gridSize && !visited.has(`${newRow},${newCol}`)) {
+                        visited.add(`${newRow},${newCol}`);
+                        queue.push({ pos: { row: newRow, col: newCol }, path: [...path, { row: newRow, col: newCol }] });
+                    }
+                }
+            }
+            return null;
+        }
+
+        function renderGrid() {
+            gridElement.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
+            gridElement.innerHTML = '';
+            tiles = [];
+            for (let r = 0; r < gridSize; r++) {
+                for (let c = 0; c < gridSize; c++) {
+                    const tile = grid[r][c];
+                    const div = document.createElement('div');
+                    div.className = `tile ${tile.type}`;
+                    if (tile.type === 'start' || tile.type === 'end') {
+                        div.innerHTML = `<img src="https://via.placeholder.com/50/${tile.type === 'start' ? '0f0' : 'f00'}/fff?text=${tile.type[0].toUpperCase()}" style="transform: rotate(${tile.rotation}deg)">`;
+                    } else if (tile.type === 'block') {
+                        div.innerHTML = `<img src="https://via.placeholder.com/50/333/fff?text=X">`;
+                    } else {
+                        div.innerHTML = `<img src="https://via.placeholder.com/50/555/fff?text=${tile.type[0].toUpperCase()}" style="transform: rotate(${tile.rotation}deg)">`;
+                        div.onclick = () => rotateTile(r, c);
+                    }
+                    gridElement.appendChild(div);
+                    tiles.push(div);
+                }
+            }
+            checkConnections();
+        }
+
+        function rotateTile(row, col) {
+            if (grid[row][col].type === 'start' || grid[row][col].type === 'end' || grid[row][col].type === 'block') return;
+            grid[row][col].rotation = (grid[row][col].rotation + 90) % 360;
+            moves++;
+            renderGrid();
+            updateInfo();
+            if (isSolved()) {
+                setTimeout(() => {
+                    alert(`Level ${level} complete! Moves: ${moves}`);
+                    level++;
+                    initGame();
+                }, 500);
+            }
+        }
+
+        function checkConnections() {
+            const visited = new Set();
+            const stack = [{ row: start.row, col: start.col, from: null }];
+            const connected = new Set();
+
+            while (stack.length) {
+                const { row, col, from } = stack.pop();
+                const key = `${row},${col}`;
+                if (visited.has(key)) continue;
+                visited.add(key);
+                const tile = grid[row][col];
+                if (!tile || tile.type === 'block') continue;
+
+                const rotatedConnections = rotateConnections(tile.connections, tile.rotation);
+                connected.add(key);
+                const directions = [[-1, 0, 'u', 'd'], [1, 0, 'd', 'u'], [0, -1, 'l', 'r'], [0, 1, 'r', 'l']];
+                for (const [dr, dc, fromDir, toDir] of directions) {
+                    if (rotatedConnections.includes(fromDir)) {
+                        const newRow = row + dr, newCol = col + dc;
+                        if (newRow >= 0 && newRow < gridSize && newCol >= 0 && newCol < gridSize) {
+                            const neighbor = grid[newRow][newCol];
+                            if (neighbor && neighbor.type !== 'block' && rotateConnections(neighbor.connections, neighbor.rotation).includes(toDir)) {
+                                stack.push({ row: newRow, col: newCol, from: fromDir });
+                            }
+                        }
+                    }
+                }
+            }
+
+            tiles.forEach((tile, i) => {
+                const row = Math.floor(i / gridSize), col = i % gridSize;
+                if (connected.has(`${row},${col}`) && grid[row=root][col].type !== 'block') {
+                    tile.classList.add('connected');
+                } else {
+                    tile.classList.remove('connected');
+                }
+            });
+        }
+
+        function rotateConnections(connections, rotation) {
+            if (!connections) return '';
+            const dirs = 'udlr';
+            const rotated = connections.split('').map(d => {
+                const idx = (dirs.indexOf(d) + rotation / 90) % 4;
+                return dirs[idx];
+            }).join('');
+            return [...new Set(rotated.split(''))].sort().join('');
+        }
+
+        function isSolved() {
+            const visited = new Set();
+            const stack = [{ row: start.row, col: start.col }];
+            while (stack.length) {
+                const { row, col } = stack.pop();
+                const key = `${row},${col}`;
+                if (visited.has(key)) continue;
+                visited.add(key);
+                if (row === end.row && col === end.col) return true;
+                const tile = grid[row][col];
+                if (!tile || tile.type === 'block') continue;
+
+                const rotatedConnections = rotateConnections(tile.connections, tile.rotation);
+                const directions = [[-1, 0, 'u', 'd'], [1, 0, 'd', 'u'], [0, -1, 'l', 'r'], [0, 1, 'r', 'l']];
+                for (const [dr, dc, fromDir, toDir] of directions) {
+                    if (rotatedConnections.includes(fromDir)) {
+                        const newRow = row + dr, newCol = col + dc;
+                        if (newRow >= 0 && newRow < gridSize && newCol >= 0 && newCol < gridSize) {
+                            const neighbor = grid[newRow][newCol];
+                            if (neighbor && neighbor.type !== 'block' && rotateConnections(neighbor.connections, neighbor.rotation).includes(toDir)) {
+                                stack.push({ row: newRow, col: newCol });
+                            }
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        function resetLevel() {
+            moves = 0;
+            initGame();
+        }
+
+        function getHint() {
+            // Highlight a tile that needs rotation to connect to a neighbor
+            for (let r = 0; r < gridSize; r++) {
+                for (let c = 0; c < gridSize; c++) {
+                    const tile = grid[r][c];
+                    if (tile.type === 'start' || tile.type === 'end' || tile.type === 'block') continue;
+                    const rotatedConnections = rotateConnections(tile.connections, tile.rotation);
+                    const directions = [[-1, 0, 'u', 'd'], [1, 0, 'd', 'u'], [0, -1, 'l', 'r'], [0, 1, 'r', 'l']];
+                    for (const [dr, dc, fromDir, toDir] of directions) {
+                        if (rotatedConnections.includes(fromDir)) {
+                            const newRow = r + dr, newCol = c + dc;
+                            if (newRow >= 0 && newRow < gridSize && newCol >= 0 && newCol < gridSize) {
+                                const neighbor = grid[newRow][newCol];
+                                if (neighbor && neighbor.type !== 'block' && !rotateConnections(neighbor.connections, neighbor.rotation).includes(toDir)) {
+                                    tiles[r * gridSize + c].style.border = '2px solid yellow';
+                                    setTimeout(() => tiles[r * gridSize + c].style.border = '', 1000);
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        function updateInfo() {
+            infoElement.textContent = `Level: ${level} | Moves: ${moves}`;
+        }
+
+        initGame();
+    </script>
+</body>
+</html>
