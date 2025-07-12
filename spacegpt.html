@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Infinite Space Screensaver</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#000;}
+  canvas{display:block}
+</style>
+</head>
+<body>
+
+<!-- Three.js from a CDN (July 2025 build) -->
+<script type="module">
+import * as THREE from 'https://unpkg.com/three@0.164.0/build/three.module.js';
+import {OrbitControls} from 'https://unpkg.com/three@0.164.0/examples/jsm/controls/OrbitControls.js';
+
+// ---------- Constants ----------
+const PHASES = ['CRUISE','WARP','DESCENT','GROUND','TAKEOFF'];
+const PARAMS = {
+  cruiseTime:[15000,30000],
+  groundTime:[20000,40000],
+  descentTime:[8000,12000],
+  takeoffTime:[5000,7000],
+  starCount: 5000,
+  maxAliens: 12,
+  terrainSize: 800,
+  terrainSegments: 128
+};
+
+// ---------- Core three.js setup ----------
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(devicePixelRatio);
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 10000);
+camera.position.z = 5;
+
+// subtle automated camera drift (disabled OrbitControls for a true “hands-off” saver)
+const camDrift = new THREE.Vector3();
+
+// Lighting (directional sunlight + ambient)
+const sun = new THREE.DirectionalLight(0xffffff, 1.0);
+sun.position.set(50, 100, -20);
+scene.add(sun);
+scene.add(new THREE.AmbientLight(0x555555));
+
+// ---------- Starfield ----------
+let starGeo, starMat, starField;
+function createStarfield() {
+  if(starField) scene.remove(starField);
+  starGeo = new THREE.BufferGeometry();
+  const pos = [];
+  for(let i=0;i<PARAMS.starCount;i++){
+    const r = 2000*Math.random();
+    const theta = Math.random()*2*Math.PI;
+    const phi = Math.acos(2*Math.random()-1);
+    pos.push(
+      r*Math.sin(phi)*Math.cos(theta),
+      r*Math.sin(phi)*Math.sin(theta),
+      r*Math.cos(phi)
+    );
+  }
+  starGeo.setAttribute('position', new THREE.Float32BufferAttribute(pos,3));
+  starMat = new THREE.PointsMaterial({color:0xffffff,size:3, sizeAttenuation:false});
+  starField = new THREE.Points(starGeo, starMat);
+  scene.add(starField);
+}
+
+// ---------- Planet ----------
+let planet, planetGroup;
+function generatePlanet() {
+  if(planetGroup) scene.remove(planetGroup);
+  planetGroup = new THREE.Group();
+  const radius = THREE.MathUtils.randFloat(60, 160);
+  const color = new THREE.Color().setHSL(Math.random(),0.6,0.5);
+  const geo = new THREE.SphereGeometry(radius,64,64);
+  const mat = new THREE.MeshStandardMaterial({color, roughness:0.8, metalness:0.1});
+  planet = new THREE.Mesh(geo,mat);
+  planetGroup.add(planet);
+
+  // Optional ring
+  if (Math.random()<0.4) {
+    const ringGeo = new THREE.RingGeometry(radius*1.2, radius*1.5, 64);
+    const ringMat = new THREE.MeshBasicMaterial({color:color.clone().multiplyScalar(1.2), side:THREE.DoubleSide, transparent:true, opacity:0.7});
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.rotation.x = Math.PI/2;
+    planetGroup.add(ring);
+  }
+  planetGroup.position.set(0, -1000, -2500); // start far away
+  scene.add(planetGroup);
+}
+
+// ---------- Terrain & Aliens ----------
+let terrain, aliensGroup;
+function generateTerrain() {
+  if(terrain) scene.remove(terrain);
+  if(aliensGroup) scene.remove(aliensGroup);
+  // Plane with noise displacement
+  const size = PARAMS.terrainSize;
+  const seg = PARAMS.terrainSegments;
+  const geo = new THREE.PlaneGeometry(size,size,seg,seg);
+  const pos = geo.attributes.position;
+  const seed = Math.random()*1000;
+  for(let i=0;i<pos.count;i++){
+    const x = pos.getX(i)/size;
+    const y = pos.getY(i)/size;
+    const z = simplexNoise(x*4+seed, y*4-seed)*40; // use simplex later
+    pos.setZ(i, z);
+  }
+  geo.computeVertexNormals();
+  const mat = new THREE.MeshStandardMaterial({color:planet.material.color.clone().multiplyScalar(0.5), flatShading:true});
+  terrain = new THREE.Mesh(geo, mat);
+  terrain.rotation.x = -Math.PI/2;
+  scene.add(terrain);
+
+  // Aliens
+  aliensGroup = new THREE.Group();
+  const n = THREE.MathUtils.randInt(3, PARAMS.maxAliens);
+  for(let i=0;i<n;i++){
+    const bodyGeo = new THREE.DodecahedronGeometry(THREE.MathUtils.randFloat(4,8));
+    const bodyMat = new THREE.MeshStandardMaterial({color:new THREE.Color().setHSL(Math.random(),0.7,0.5), flatShading:true});
+    const alien = new THREE.Mesh(bodyGeo, bodyMat);
+    const x = THREE.MathUtils.randFloatSpread(size*0.8);
+    const z = THREE.MathUtils.randFloatSpread(size*0.8);
+    alien.position.set(x,5,z);
+    alien.userData = {phase:Math.random()*Math.PI*2};
+    aliensGroup.add(alien);
+  }
+  scene.add(aliensGroup);
+}
+
+// Simplex noise utility (2-D) – tiny inline implementation
+function simplexNoise(x, y){
+  // quick pseudonoise – more than enough for screensaver
+  return (Math.sin(x*12.9898 + y*78.233)*43758.5453)%1;
+}
+
+// ---------- State machine ----------
+let phase = 'CRUISE';
+let phaseStart = performance.now();
+let phaseDuration = randomRange(...PARAMS.cruiseTime);
+
+function randomRange(a,b){return a + Math.random()*(b-a);}
+function setPhase(newPhase, duration){
+  phase = newPhase;
+  phaseStart = performance.now();
+  phaseDuration = duration;
+}
+
+function updatePhase(delta, elapsed){
+  const t = (elapsed - phaseStart);
+  if(t>phaseDuration){
+    switch(phase){
+      case 'CRUISE':
+        setPhase('WARP',3000);
+        break;
+      case 'WARP':
+        generatePlanet();
+        setPhase('DESCENT', randomRange(...PARAMS.descentTime));
+        break;
+      case 'DESCENT':
+        generateTerrain();
+        setPhase('GROUND', randomRange(...PARAMS.groundTime));
+        break;
+      case 'GROUND':
+        setPhase('TAKEOFF', randomRange(...PARAMS.takeoffTime));
+        break;
+      case 'TAKEOFF':
+        createStarfield();
+        setPhase('CRUISE', randomRange(...PARAMS.cruiseTime));
+        break;
+    }
+  }
+}
+
+// ---------- Animation loop ----------
+createStarfield();
+let last = performance.now();
+function animate() {
+  requestAnimationFrame(animate);
+  const now = performance.now();
+  const delta = now - last;
+  last = now;
+
+  // camera drift
+  camera.rotation.x += camDrift.x*delta;
+  camera.rotation.y += camDrift.y*delta;
+
+  // Phase-specific logic
+  switch(phase){
+    case 'CRUISE':
+      camera.position.z -= delta*0.05;
+      break;
+    case 'DESCENT':
+      planetGroup.position.z += delta*0.25;
+      if(planetGroup.position.z>-200){
+        camera.position.y -= delta*0.06;
+      }
+      break;
+    case 'GROUND':
+      // simple alien idle anim
+      aliensGroup.children.forEach(a=>{
+        a.userData.phase += delta*0.002;
+        a.position.y = 5 + Math.sin(a.userData.phase)*1.2;
+        a.rotation.y += delta*0.0005;
+      });
+      break;
+    case 'TAKEOFF':
+      camera.position.y += delta*0.1;
+      camera.position.z -= delta*0.15;
+      break;
+  }
+
+  updatePhase(delta, now);
+  renderer.render(scene,camera);
+}
+animate();
+
+// ---------- Responsive ----------
+window.addEventListener('resize',()=>{
+  renderer.setSize(innerWidth,innerHeight);
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+});
+
+// ---------- Random slow drift vector ----------
+function refreshDrift(){
+  camDrift.set(
+    THREE.MathUtils.randFloatSpread(0.00004),
+    THREE.MathUtils.randFloatSpread(0.00004),
+    0
+  );
+  setTimeout(refreshDrift, randomRange(5000,15000));
+}
+refreshDrift();
+</script>
+</body>
+</html>
