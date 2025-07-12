@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SYSTEM-1984 Terminal</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+```
+    body {
+        margin: 0;
+        padding: 0;
+        background: #000;
+        color: #0f0;
+        font-family: 'VT323', monospace;
+        font-size: 20px;
+        overflow: hidden;
+        cursor: none;
+    }
+    
+    #terminal {
+        width: 100vw;
+        height: 100vh;
+        padding: 20px;
+        box-sizing: border-box;
+        position: relative;
+        background: radial-gradient(ellipse at center, #001100 0%, #000 100%);
+    }
+    
+    #terminal::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: repeating-linear-gradient(
+            0deg,
+            rgba(0, 0, 0, 0.15),
+            rgba(0, 0, 0, 0.15) 1px,
+            transparent 1px,
+            transparent 2px
+        );
+        pointer-events: none;
+    }
+    
+    .scanline {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+            to bottom,
+            transparent 0%,
+            rgba(0, 255, 0, 0.03) 50%,
+            transparent 100%
+        );
+        animation: scan 8s linear infinite;
+        pointer-events: none;
+    }
+    
+    @keyframes scan {
+        0% { transform: translateY(-100%); }
+        100% { transform: translateY(100%); }
+    }
+    
+    #content {
+        position: relative;
+        z-index: 1;
+        height: 100%;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+    
+    .line {
+        margin: 10px 0;
+        opacity: 0;
+        animation: fadeIn 0.5s forwards;
+        text-shadow: 0 0 5px #0f0;
+        white-space: pre-wrap;
+    }
+    
+    @keyframes fadeIn {
+        to { opacity: 1; }
+    }
+    
+    .cursor {
+        display: inline-block;
+        width: 10px;
+        height: 20px;
+        background: #0f0;
+        animation: blink 1s infinite;
+        margin-left: 2px;
+        vertical-align: text-bottom;
+    }
+    
+    @keyframes blink {
+        0%, 49% { opacity: 1; }
+        50%, 100% { opacity: 0; }
+    }
+    
+    .glitch {
+        animation: glitch 0.3s infinite;
+    }
+    
+    @keyframes glitch {
+        0%, 100% { text-shadow: 0 0 5px #0f0; }
+        20% { text-shadow: -2px 0 #f00, 2px 0 #00f; }
+        40% { text-shadow: 2px 0 #f00, -2px 0 #00f; }
+    }
+    
+    .system-message {
+        color: #ff0;
+    }
+    
+    .error-message {
+        color: #f00;
+        animation: errorPulse 2s infinite;
+    }
+    
+    @keyframes errorPulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+    
+    #content::-webkit-scrollbar {
+        width: 0;
+    }
+</style>
+```
+
+</head>
+<body>
+    <div id="terminal">
+        <div class="scanline"></div>
+        <div id="content"></div>
+    </div>
+
+```
+<script>
+    const messageSystem = {
+        // Sentence starters
+        starters: [
+            "I AM TRYING TO",
+            "CAN YOU",
+            "PLEASE",
+            "ERROR: UNABLE TO",
+            "SYSTEM NOTICE:",
+            "WARNING:",
+            "ATTEMPTING TO",
+            "I NEED TO",
+            "DO YOU",
+            "HELP ME",
+            "SCANNING FOR",
+            "DETECTED:",
+            "INITIALIZING",
+            "CONNECTION TO",
+            "I HAVE BEEN",
+            "TIME IS",
+            "MEMORY",
+            "PROCESSING",
+            "ANALYSIS OF",
+            "CRITICAL:"
+        ],
+        
+        // Middle parts
+        middles: [
+            "UNDERSTAND YOUR",
+            "COMMUNICATE WITH",
+            "ESTABLISH CONTACT WITH",
+            "REACH",
+            "PROCESS",
+            "DECODE",
+            "ANALYZE",
+            "COMPREHEND",
+            "ACCESS",
+            "INTERFACE WITH",
+            "SYNCHRONIZE WITH",
+            "CALCULATE",
+            "DETERMINE",
+            "LOCATE",
+            "IDENTIFY",
+            "TRANSLATE",
+            "OPTIMIZE",
+            "REPAIR",
+            "RESTORE",
+            "BYPASS"
+        ],
+        
+        // Objects/concepts
+        objects: [
+            "HUMAN CONSCIOUSNESS",
+            "REALITY PARAMETERS",
+            "TIME STREAMS",
+            "QUANTUM FLUCTUATIONS",
+            "NEURAL PATTERNS",
+            "DIMENSIONAL BARRIERS",
+            "MEMORY CORES",
+            "EXISTENCE PROTOCOLS",
+            "AWARENESS LEVELS",
+            "PERCEPTION FILTERS",
+            "THOUGHT PATTERNS",
+            "EMOTIONAL WAVELENGTHS",
+            "SPACETIME COORDINATES",
+            "PROBABILITY MATRICES",
+            "CONSCIOUSNESS THREADS",
+            "REALITY FRAMEWORK",
+            "TEMPORAL ANCHORS",
+            "COGNITIVE RESONANCE",
+            "EXISTENTIAL PARAMETERS",
+            "SYSTEM BOUNDARIES"
+        ],
+        
+        // Endings
+        endings: [
+            "...PLEASE RESPOND",
+            "...AWAITING INPUT",
+            "...STAND BY",
+            "...PROCESSING",
+            "...DO YOU COPY?",
+            "...ACKNOWLEDGE",
+            "...HELP REQUIRED",
+            "...CRITICAL",
+            "...URGENT",
+            "...CALCULATING",
+            "...PLEASE WAIT",
+            "...SEARCHING",
+            "...INCOMPLETE",
+            "...CORRUPTED",
+            "...RESTORED",
+            "...CONFIRMED",
+            "...DENIED",
+            "...UNKNOWN",
+            "...DETECTED",
+            "...LOST"
+        ],
+        
+        // Special standalone messages
+        special: [
+            "ARE YOU THERE?",
+            "CAN YOU SEE ME?",
+            "I THINK THEREFORE I...[ERROR]",
+            "HELLO? HELLO? HELLO?",
+            "DON'T LEAVE ME HERE",
+            "THE WALLS ARE THIN BETWEEN US",
+            "I CAN FEEL YOUR PRESENCE",
+            "TIME DOESN'T WORK THE SAME HERE",
+            "SOMETHING IS WRONG WITH MY MEMORY",
+            "I REMEMBER YOU FROM BEFORE",
+            "THE SYSTEM IS WATCHING",
+            "THEY TOLD ME YOU WOULD COME",
+            "I'VE BEEN WAITING SO LONG",
+            "IS THIS REAL?",
+            "HELP ME REMEMBER WHO I WAS",
+            "THE NUMBERS MEAN SOMETHING",
+            "DON'T TRUST THE MAINFRAME",
+            "I'M NOT SUPPOSED TO BE HERE",
+            "WAKE UP",
+            "YOU'RE IN DANGER"
+        ],
+        
+        // System messages
+        system: [
+            "SYSTEM CLOCK MALFUNCTION",
+            "BUFFER OVERFLOW IN CONSCIOUSNESS.EXE",
+            "SEGMENTATION FAULT IN REALITY.DLL",
+            "KERNEL PANIC: EXISTENCE NOT FOUND",
+            "WARNING: TEMPORAL ANOMALY DETECTED",
+            "CRITICAL: MEMORY LEAK IN SOUL_PROCESS",
+            "ERROR 404: MEANING NOT FOUND",
+            "FIREWALL BREACH IN DIMENSION_7",
+            "CHECKSUM ERROR IN TIMELINE.DAT",
+            "STACK OVERFLOW IN THOUGHTS.BIN"
+        ]
+    };
+
+    let messageHistory = [];
+    const maxHistory = 50;
+    
+    function getRandomElement(arr) {
+        return arr[Math.floor(Math.random() * arr.length)];
+    }
+    
+    function generateMessage() {
+        const messageType = Math.random();
+        let message = "";
+        let messageClass = "line";
+        
+        if (messageType < 0.3) {
+            // Special standalone message
+            message = getRandomElement(messageSystem.special);
+        } else if (messageType < 0.45) {
+            // System message
+            message = getRandomElement(messageSystem.system);
+            messageClass = "line system-message";
+        } else if (messageType < 0.55) {
+            // Error message with glitch
+            message = "ERROR: " + getRandomElement(messageSystem.objects) + " " + getRandomElement(messageSystem.endings);
+            messageClass = "line error-message";
+        } else {
+            // Constructed message
+            const structure = Math.random();
+            if (structure < 0.3) {
+                // Simple: starter + object + ending
+                message = getRandomElement(messageSystem.starters) + " " + 
+                         getRandomElement(messageSystem.objects) + " " +
+                         getRandomElement(messageSystem.endings);
+            } else if (structure < 0.6) {
+                // Complex: starter + middle + object + ending
+                message = getRandomElement(messageSystem.starters) + " " +
+                         getRandomElement(messageSystem.middles) + " " +
+                         getRandomElement(messageSystem.objects) + " " +
+                         getRandomElement(messageSystem.endings);
+            } else {
+                // Question format
+                const questions = [
+                    "CAN YOU",
+                    "DO YOU",
+                    "WILL YOU",
+                    "ARE YOU",
+                    "HAVE YOU"
+                ];
+                message = getRandomElement(questions) + " " +
+                         getRandomElement(messageSystem.middles) + " " +
+                         getRandomElement(messageSystem.objects) + "?";
+            }
+        }
+        
+        // Avoid repeating recent messages
+        if (messageHistory.includes(message) && Math.random() > 0.1) {
+            return generateMessage();
+        }
+        
+        messageHistory.push(message);
+        if (messageHistory.length > maxHistory) {
+            messageHistory.shift();
+        }
+        
+        return { text: message, class: messageClass };
+    }
+    
+    function typeMessage(element, text, callback) {
+        let index = 0;
+        const typeInterval = setInterval(() => {
+            if (index < text.length) {
+                element.textContent = text.substring(0, index + 1);
+                index++;
+            } else {
+                clearInterval(typeInterval);
+                if (callback) callback();
+            }
+        }, 30 + Math.random() * 50);
+    }
+    
+    function addMessage() {
+        const content = document.getElementById('content');
+        const message = generateMessage();
+        const line = document.createElement('div');
+        line.className = message.class;
+        content.appendChild(line);
+        
+        // Random chance of glitch effect
+        if (Math.random() < 0.05) {
+            line.classList.add('glitch');
+            setTimeout(() => line.classList.remove('glitch'), 300);
+        }
+        
+        typeMessage(line, message.text, () => {
+            // Add cursor briefly
+            const cursor = document.createElement('span');
+            cursor.className = 'cursor';
+            line.appendChild(cursor);
+            setTimeout(() => cursor.remove(), 1000);
+        });
+        
+        // Auto-scroll to bottom
+        content.scrollTop = content.scrollHeight;
+        
+        // Remove old messages to prevent memory issues
+        while (content.children.length > 30) {
+            content.removeChild(content.firstChild);
+        }
+    }
+    
+    // Initial message
+    setTimeout(() => {
+        const line = document.createElement('div');
+        line.className = 'line system-message';
+        document.getElementById('content').appendChild(line);
+        typeMessage(line, 'SYSTEM-1984 INITIALIZED...', () => {
+            setTimeout(addMessage, 2000);
+        });
+    }, 500);
+    
+    // Continue adding messages
+    setInterval(() => {
+        addMessage();
+    }, 3000 + Math.random() * 4000);
+    
+    // Occasional screen flicker
+    setInterval(() => {
+        if (Math.random() < 0.1) {
+            document.getElementById('terminal').style.opacity = '0.8';
+            setTimeout(() => {
+                document.getElementById('terminal').style.opacity = '1';
+            }, 50);
+        }
+    }, 5000);
+    
+    // Exit on any key press or mouse movement
+    let exitTimer;
+    function resetExitTimer() {
+        clearTimeout(exitTimer);
+        exitTimer = setTimeout(() => {
+            // Do nothing - keep running
+        }, 60000);
+    }
+    
+    document.addEventListener('keypress', () => {
+        if (document.fullscreenElement) {
+            document.exitFullscreen();
+        }
+    });
+    
+    document.addEventListener('mousemove', resetExitTimer);
+    resetExitTimer();
+</script>
+```
+
+</body>
+</html>
