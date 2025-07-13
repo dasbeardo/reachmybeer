@@ -5,12 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ultimate Pipe Puzzle - Infinite Flow</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
@@ -21,7 +16,6 @@
             min-height: 100vh;
             overflow: hidden;
         }
-
         .game-container {
             background: rgba(0, 0, 0, 0.3);
             border-radius: 20px;
@@ -29,12 +23,10 @@
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
             backdrop-filter: blur(10px);
         }
-
         .header {
             text-align: center;
             margin-bottom: 20px;
         }
-
         h1 {
             font-size: 2.5em;
             margin-bottom: 10px;
@@ -44,14 +36,12 @@
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
-
         .stats {
             display: flex;
             justify-content: space-around;
             margin-bottom: 20px;
             gap: 20px;
         }
-
         .stat {
             background: rgba(255, 255, 255, 0.1);
             padding: 10px 20px;
@@ -59,18 +49,8 @@
             text-align: center;
             flex: 1;
         }
-
-        .stat-label {
-            font-size: 0.9em;
-            opacity: 0.8;
-        }
-
-        .stat-value {
-            font-size: 1.5em;
-            font-weight: bold;
-            margin-top: 5px;
-        }
-
+        .stat-label { font-size: 0.9em; opacity: 0.8; }
+        .stat-value { font-size: 1.5em; font-weight: bold; margin-top: 5px; }
         canvas {
             border: 3px solid rgba(255, 255, 255, 0.2);
             border-radius: 10px;
@@ -79,7 +59,6 @@
             margin: 0 auto;
             background: rgba(0, 0, 0, 0.2);
         }
-        
         #gameCanvas {
             width: 90vw;
             max-width: 98vw;
@@ -88,14 +67,12 @@
             display: block;
             touch-action: manipulation;
         }
-
         .controls {
             display: flex;
             justify-content: center;
             gap: 10px;
             margin-top: 20px;
         }
-
         button {
             background: linear-gradient(45deg, #4facfe, #00f2fe);
             border: none;
@@ -108,16 +85,11 @@
             transition: all 0.3s ease;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
         }
-
         button:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
         }
-
-        button:active {
-            transform: translateY(0);
-        }
-
+        button:active { transform: translateY(0); }
         .message {
             text-align: center;
             margin-top: 15px;
@@ -125,12 +97,10 @@
             height: 30px;
             transition: all 0.3s ease;
         }
-
         .success {
             color: #4ade80;
             text-shadow: 0 0 20px rgba(74, 222, 128, 0.5);
         }
-
         .particles {
             position: fixed;
             top: 0;
@@ -171,7 +141,7 @@
         <div class="message" id="message"></div>
     </div>
     <script>
-        // Particle background
+        // === PARTICLES BACKGROUND ===
         const particlesCanvas = document.getElementById('particles');
         const particlesCtx = particlesCanvas.getContext('2d');
         particlesCanvas.width = window.innerWidth;
@@ -210,7 +180,7 @@
         }
         animateParticles();
 
-        // Game resizing
+        // Responsive resizing for both canvases
         function resizeGameCanvas() {
             const canvas = document.getElementById('gameCanvas');
             let size = Math.min(window.innerWidth * 0.95, window.innerHeight * 0.60, 500);
@@ -222,997 +192,815 @@
             }
         }
         window.addEventListener('resize', resizeGameCanvas);
-
-        // Particle canvas resizing
         window.addEventListener('resize', () => {
             particlesCanvas.width = window.innerWidth;
             particlesCanvas.height = window.innerHeight;
         });
 
-        // Main game
+        // ==== PIPEPUZZLEGAME CLASS ====
         class PipePuzzleGame {
-            constructor() {
-                this.canvas = document.getElementById('gameCanvas');
-                this.ctx = this.canvas.getContext('2d');
-                this.gridSize = 8;
-                this.cellSize = Math.min(this.canvas.width, this.canvas.height) / this.gridSize;
-                this.grid = [];
-                this.level = 1;
-                this.score = 0;
-                this.startTime = Date.now();
-                this.flowAnimation = 0;
-                this.isFlowing = false;
-                // Pipe types with connections: [top, right, bottom, left]
-                this.pipeTypes = {
-                    'straight-h': { connections: [0, 1, 0, 1], symbol: '━' },
-                    'straight-v': { connections: [1, 0, 1, 0], symbol: '┃' },
-                    'corner-tl': { connections: [1, 0, 0, 1], symbol: '┏' },
-                    'corner-tr': { connections: [1, 1, 0, 0], symbol: '┓' },
-                    'corner-bl': { connections: [0, 0, 1, 1], symbol: '┗' },
-                    'corner-br': { connections: [0, 1, 1, 0], symbol: '┛' },
-                    'cross': { connections: [1, 1, 1, 1], symbol: '╋' },
-                    'tee-t': { connections: [0, 1, 1, 1], symbol: '┻' },
-                    'tee-b': { connections: [1, 1, 0, 1], symbol: '┳' },
-                    'tee-l': { connections: [1, 0, 1, 1], symbol: '┫' },
-                    'tee-r': { connections: [1, 1, 1, 0], symbol: '┣' }
-                };
-                this.init();
-            }
-            init() {
-                this.generateNewLevel();
-                // Mouse click support
-                this.canvas.addEventListener('click', (e) => {
-                    const rect = this.canvas.getBoundingClientRect();
-                    const x = Math.floor((e.clientX - rect.left) / this.cellSize);
-                    const y = Math.floor((e.clientY - rect.top) / this.cellSize);
-                    this.rotatePipe(x, y);
-                });
-                // Touch support for mobile
-                this.canvas.addEventListener('touchstart', (e) => {
-                    if (e.touches.length !== 1) return;
-                    e.preventDefault();
-                    const rect = this.canvas.getBoundingClientRect();
-                    const touch = e.touches[0];
-                    const x = Math.floor((touch.clientX - rect.left) / this.cellSize);
-                    const y = Math.floor((touch.clientY - rect.top) / this.cellSize);
-                    this.rotatePipe(x, y);
-                }, { passive: false });
-                this.updateTimer();
-                this.animate();
-            }
-            generateNewLevel() {
-                this.gridSize = Math.min(8 + Math.floor(this.level / 5), 12);
-                this.cellSize = Math.min(this.canvas.width, this.canvas.height) / this.gridSize;
-                this.grid = Array(this.gridSize).fill().map(() => Array(this.gridSize).fill(null));
-                const positions = this.getRandomStartEndPositions();
-                this.startPos = positions.start;
-                this.endPos = positions.end;
-                this.grid[this.startPos.y][this.startPos.x] = { type: 'start', rotation: 0, locked: true };
-                this.grid[this.endPos.y][this.endPos.x] = { type: 'end', rotation: 0, locked: true };
-                const path = this.generateSolutionPath();
-                this.solutionRotations = {};
-                const solutionCells = new Set();
-                path.forEach(p => solutionCells.add(`${p.x},${p.y}`));
-                for (let i = 1; i < path.length - 1; i++) {
-                    const prev = path[i - 1], curr = path[i], next = path[i + 1];
-                    const pipeInfo = this.determinePipeTypeAndRotation(prev, curr, next);
-                    this.solutionRotations[`${curr.x},${curr.y}`] = pipeInfo.rotation;
-                    const scrambledRotation = Math.floor(Math.random() * 4) * 90;
-                    this.grid[curr.y][curr.x] = {
-                        type: pipeInfo.type,
-                        rotation: scrambledRotation,
+    constructor() {
+        this.canvas = document.getElementById('gameCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.gridSize = 8;
+        this.cellSize = Math.min(this.canvas.width, this.canvas.height) / this.gridSize;
+        this.grid = [];
+        this.level = 1;
+        this.score = 0;
+        this.startTime = Date.now();
+        this.flowAnimation = 0;
+        this.isFlowing = false;
+        // Pipe types with connections: [top, right, bottom, left]
+        this.pipeTypes = {
+            'straight-h': { connections: [0, 1, 0, 1], symbol: '━' },
+            'straight-v': { connections: [1, 0, 1, 0], symbol: '┃' },
+            'corner-tl': { connections: [1, 0, 0, 1], symbol: '┏' },
+            'corner-tr': { connections: [1, 1, 0, 0], symbol: '┓' },
+            'corner-bl': { connections: [0, 0, 1, 1], symbol: '┗' },
+            'corner-br': { connections: [0, 1, 1, 0], symbol: '┛' },
+            'cross': { connections: [1, 1, 1, 1], symbol: '╋' },
+            'tee-t': { connections: [0, 1, 1, 1], symbol: '┻' },
+            'tee-b': { connections: [1, 1, 0, 1], symbol: '┳' },
+            'tee-l': { connections: [1, 0, 1, 1], symbol: '┫' },
+            'tee-r': { connections: [1, 1, 1, 0], symbol: '┣' }
+        };
+        this.init();
+    }
+
+    init() {
+        this.generateNewLevel();
+
+        // Mouse click support
+        this.canvas.addEventListener('click', (e) => {
+            const rect = this.canvas.getBoundingClientRect();
+            const x = Math.floor((e.clientX - rect.left) / this.cellSize);
+            const y = Math.floor((e.clientY - rect.top) / this.cellSize);
+            this.rotatePipe(x, y);
+        });
+
+        // Touch support for mobile
+        this.canvas.addEventListener('touchstart', (e) => {
+            if (e.touches.length !== 1) return;
+            e.preventDefault();
+            const rect = this.canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            const x = Math.floor((touch.clientX - rect.left) / this.cellSize);
+            const y = Math.floor((touch.clientY - rect.top) / this.cellSize);
+            this.rotatePipe(x, y);
+        }, { passive: false });
+
+        this.updateTimer();
+        this.animate();
+    }
+
+    generateNewLevel() {
+        this.gridSize = Math.min(8 + Math.floor(this.level / 5), 12);
+        this.cellSize = Math.min(this.canvas.width, this.canvas.height) / this.gridSize;
+        this.grid = Array(this.gridSize).fill().map(() => Array(this.gridSize).fill(null));
+        const positions = this.getRandomStartEndPositions();
+        this.startPos = positions.start;
+        this.endPos = positions.end;
+        this.grid[this.startPos.y][this.startPos.x] = { type: 'start', rotation: 0, locked: true };
+        this.grid[this.endPos.y][this.endPos.x] = { type: 'end', rotation: 0, locked: true };
+        const path = this.generateSolutionPath();
+        this.solutionRotations = {};
+        const solutionCells = new Set();
+        path.forEach(p => solutionCells.add(`${p.x},${p.y}`));
+        for (let i = 1; i < path.length - 1; i++) {
+            const prev = path[i - 1], curr = path[i], next = path[i + 1];
+            const pipeInfo = this.determinePipeTypeAndRotation(prev, curr, next);
+            this.solutionRotations[`${curr.x},${curr.y}`] = pipeInfo.rotation;
+            const scrambledRotation = Math.floor(Math.random() * 4) * 90;
+            this.grid[curr.y][curr.x] = {
+                type: pipeInfo.type,
+                rotation: scrambledRotation,
+                locked: false,
+                isPartOfSolution: true
+            };
+        }
+        this.addDeceptivePaths(solutionCells);
+        for (let y = 0; y < this.gridSize; y++) {
+            for (let x = 0; x < this.gridSize; x++) {
+                if (!this.grid[y][x]) {
+                    const pipeType = this.chooseConfusingPipe(x, y);
+                    this.grid[y][x] = {
+                        type: pipeType,
+                        rotation: Math.floor(Math.random() * 4) * 90,
                         locked: false,
-                        isPartOfSolution: true
+                        isPartOfSolution: false
                     };
                 }
-                this.addDeceptivePaths(solutionCells);
-                for (let y = 0; y < this.gridSize; y++) {
-                    for (let x = 0; x < this.gridSize; x++) {
-                        if (!this.grid[y][x]) {
-                            const pipeType = this.chooseConfusingPipe(x, y);
-                            this.grid[y][x] = {
-                                type: pipeType,
-                                rotation: Math.floor(Math.random() * 4) * 90,
-                                locked: false,
-                                isPartOfSolution: false
-                            };
-                        }
-                    }
-                }
-                this.verifySolution();
-                this.isFlowing = false;
-                this.showMessage('');
-            }
-            getRandomStartEndPositions() {
-                const edges = [];
-                
-                // Top and bottom edges
-                for (let x = 0; x < this.gridSize; x++) {
-                    edges.push({ x, y: 0 });
-                    edges.push({ x, y: this.gridSize - 1 });
-                }
-                
-                // Left and right edges (excluding corners to avoid duplicates)
-                for (let y = 1; y < this.gridSize - 1; y++) {
-                    edges.push({ x: 0, y });
-                    edges.push({ x: this.gridSize - 1, y });
-                }
-                
-                // Randomly select start and end from edges
-                const shuffled = edges.sort(() => Math.random() - 0.5);
-                let start = shuffled[0];
-                let end = shuffled[1];
-                
-                // Ensure they're not too close
-                while (Math.abs(start.x - end.x) + Math.abs(start.y - end.y) < this.gridSize / 2) {
-                    shuffled.sort(() => Math.random() - 0.5);
-                    start = shuffled[0];
-                    end = shuffled[1];
-                }
-                
-                return { start, end };
-            }
-            
-            addDeceptivePaths(solutionCells) {
-                // Create 2-4 alternative partial paths that lead nowhere (more on higher levels)
-                const numDeceptivePaths = Math.min(2 + Math.floor(this.level / 3), 5);
-                
-                for (let i = 0; i < numDeceptivePaths; i++) {
-                    // Start from a random solution cell or near start/end
-                    let startX, startY;
-                    
-                    if (Math.random() < 0.5) {
-                        // Branch from solution path
-                        const solutionArray = Array.from(solutionCells);
-                        const randomCell = solutionArray[Math.floor(Math.random() * solutionArray.length)];
-                        const [x, y] = randomCell.split(',').map(Number);
-                        
-                        // Find an adjacent empty cell
-                        const adjacents = [
-                            { x: x + 1, y }, { x: x - 1, y },
-                            { x, y: y + 1 }, { x, y: y - 1 }
-                        ].filter(pos => 
-                            pos.x >= 0 && pos.x < this.gridSize &&
-                            pos.y >= 0 && pos.y < this.gridSize &&
-                            !this.grid[pos.y][pos.x]
-                        );
-                        
-                        if (adjacents.length > 0) {
-                            const adj = adjacents[Math.floor(Math.random() * adjacents.length)];
-                            startX = adj.x;
-                            startY = adj.y;
-                        } else {
-                            continue;
-                        }
-                    } else {
-                        // Start from random empty cell
-                        do {
-                            startX = Math.floor(Math.random() * this.gridSize);
-                            startY = Math.floor(Math.random() * this.gridSize);
-                        } while (this.grid[startY][startX]);
-                    }
-                    
-                    // Create a path of 3-7 pipes (longer on higher levels)
-                    const pathLength = Math.min(3 + Math.floor(Math.random() * 4) + Math.floor(this.level / 5), 8);
-                    let currentX = startX;
-                    let currentY = startY;
-                    let prevDir = null;
-                    
-                    for (let j = 0; j < pathLength; j++) {
-                        if (this.grid[currentY][currentX]) break;
-                        
-                        // Determine pipe type based on where we came from and where we're going
-                        const possibleDirs = [
-                            { dx: 1, dy: 0 }, { dx: -1, dy: 0 },
-                            { dx: 0, dy: 1 }, { dx: 0, dy: -1 }
-                        ].filter(dir => {
-                            const newX = currentX + dir.dx;
-                            const newY = currentY + dir.dy;
-                            return newX >= 0 && newX < this.gridSize &&
-                                   newY >= 0 && newY < this.gridSize &&
-                                   !this.grid[newY][newX];
-                        });
-                        
-                        if (possibleDirs.length === 0) break;
-                        
-                        const nextDir = possibleDirs[Math.floor(Math.random() * possibleDirs.length)];
-                        
-                        // Choose appropriate pipe type
-                        let pipeType;
-                        if (!prevDir) {
-                            // First pipe - can be any type
-                            pipeType = Math.random() < 0.5 ? 
-                                (nextDir.dx !== 0 ? 'straight-h' : 'straight-v') :
-                                ['corner-tl', 'corner-tr', 'corner-bl', 'corner-br'][Math.floor(Math.random() * 4)];
-                        } else if (prevDir.dx === -nextDir.dx && prevDir.dy === -nextDir.dy) {
-                            // Straight continuation
-                            pipeType = nextDir.dx !== 0 ? 'straight-h' : 'straight-v';
-                        } else {
-                            // Corner needed
-                            if (prevDir.dx === -1 && nextDir.dy === -1) pipeType = 'corner-br';
-                            else if (prevDir.dx === -1 && nextDir.dy === 1) pipeType = 'corner-tr';
-                            else if (prevDir.dx === 1 && nextDir.dy === -1) pipeType = 'corner-bl';
-                            else if (prevDir.dx === 1 && nextDir.dy === 1) pipeType = 'corner-tl';
-                            else if (prevDir.dy === -1 && nextDir.dx === -1) pipeType = 'corner-br';
-                            else if (prevDir.dy === -1 && nextDir.dx === 1) pipeType = 'corner-bl';
-                            else if (prevDir.dy === 1 && nextDir.dx === -1) pipeType = 'corner-tr';
-                            else if (prevDir.dy === 1 && nextDir.dx === 1) pipeType = 'corner-tl';
-                            else pipeType = 'cross';
-                        }
-                        
-                        this.grid[currentY][currentX] = {
-                            type: pipeType,
-                            rotation: Math.floor(Math.random() * 4) * 90,
-                            locked: false,
-                            isPartOfSolution: false,
-                            isDeceptive: true
-                        };
-                        
-                        currentX += nextDir.dx;
-                        currentY += nextDir.dy;
-                        prevDir = nextDir;
-                    }
-                }
-            }
-            
-            chooseConfusingPipe(x, y) {
-                // Look at neighbors to choose a pipe that could connect
-                const neighbors = [
-                    { x: x + 1, y, dir: 'right' },
-                    { x: x - 1, y, dir: 'left' },
-                    { x, y: y + 1, dir: 'bottom' },
-                    { x, y: y - 1, dir: 'top' }
-                ];
-                
-                const validNeighbors = neighbors.filter(n => 
-                    n.x >= 0 && n.x < this.gridSize &&
-                    n.y >= 0 && n.y < this.gridSize &&
-                    this.grid[n.y][n.x]
-                );
-                
-                if (validNeighbors.length === 0) {
-                    // No neighbors, return random
-                    const types = ['straight-h', 'straight-v', 'corner-tl', 'corner-tr', 'corner-bl', 'corner-br'];
-                    return types[Math.floor(Math.random() * types.length)];
-                }
-                
-                // Choose a pipe that could connect to at least one neighbor
-                if (validNeighbors.length === 1) {
-                    // Could be straight or corner
-                    const options = ['straight-h', 'straight-v', 'corner-tl', 'corner-tr', 'corner-bl', 'corner-br'];
-                    return options[Math.floor(Math.random() * options.length)];
-                } else if (validNeighbors.length === 2) {
-                    // Could be corner, straight, or tee
-                    const options = ['straight-h', 'straight-v', 'corner-tl', 'corner-tr', 'corner-bl', 'corner-br',
-                                   'tee-t', 'tee-b', 'tee-l', 'tee-r'];
-                    return options[Math.floor(Math.random() * options.length)];
-                } else {
-                    // Multiple neighbors - tee or cross
-                    const options = ['tee-t', 'tee-b', 'tee-l', 'tee-r', 'cross'];
-                    return options[Math.floor(Math.random() * options.length)];
-                }
-            }
-            
-            verifySolution() {
-                // Temporarily set all solution pipes to their correct rotations
-                const originalRotations = {};
-                
-                for (let y = 0; y < this.gridSize; y++) {
-                    for (let x = 0; x < this.gridSize; x++) {
-                        const pipe = this.grid[y][x];
-                        if (pipe && pipe.isPartOfSolution) {
-                            originalRotations[`${x},${y}`] = pipe.rotation;
-                            pipe.rotation = this.solutionRotations[`${x},${y}`] || 0;
-                        }
-                    }
-                }
-                
-                // Check if solution works
-                const isSolvable = this.checkSolution(true);
-                
-                // Restore original rotations
-                for (const [key, rotation] of Object.entries(originalRotations)) {
-                    const [x, y] = key.split(',').map(Number);
-                    this.grid[y][x].rotation = rotation;
-                }
-                
-                if (!isSolvable) {
-                    console.error('Generated unsolvable puzzle! Regenerating...');
-                    this.generateNewLevel();
-                }
-            }
-            
-            generateSolutionPath() {
-                const path = [];
-                const visited = Array(this.gridSize).fill().map(() => 
-                    Array(this.gridSize).fill(false)
-                );
-                
-                // Use A* pathfinding for more interesting paths
-                const openSet = [{
-                    pos: this.startPos,
-                    g: 0,
-                    h: Math.abs(this.endPos.x - this.startPos.x) + Math.abs(this.endPos.y - this.startPos.y),
-                    parent: null
-                }];
-                
-                const closedSet = new Set();
-                
-                while (openSet.length > 0) {
-                    // Get node with lowest f score
-                    openSet.sort((a, b) => (a.g + a.h) - (b.g + b.h));
-                    const current = openSet.shift();
-                    
-                    if (current.pos.x === this.endPos.x && current.pos.y === this.endPos.y) {
-                        // Reconstruct path
-                        let node = current;
-                        while (node) {
-                            path.unshift(node.pos);
-                            node = node.parent;
-                        }
-                        break;
-                    }
-                    
-                    closedSet.add(`${current.pos.x},${current.pos.y}`);
-                    
-                    // Check neighbors
-                    const neighbors = [
-                        { x: current.pos.x + 1, y: current.pos.y },
-                        { x: current.pos.x - 1, y: current.pos.y },
-                        { x: current.pos.x, y: current.pos.y + 1 },
-                        { x: current.pos.x, y: current.pos.y - 1 }
-                    ];
-                    
-                    for (const neighbor of neighbors) {
-                        if (neighbor.x >= 0 && neighbor.x < this.gridSize &&
-                            neighbor.y >= 0 && neighbor.y < this.gridSize &&
-                            !closedSet.has(`${neighbor.x},${neighbor.y}`)) {
-                            
-                            const g = current.g + 1;
-                            const h = Math.abs(this.endPos.x - neighbor.x) + Math.abs(this.endPos.y - neighbor.y);
-                            
-                            // Add more randomness to create more varied paths
-                            const randomFactor = Math.random() * (3 + this.level * 0.2);
-                            
-                            const existing = openSet.find(n => n.pos.x === neighbor.x && n.pos.y === neighbor.y);
-                            
-                            if (!existing) {
-                                openSet.push({
-                                    pos: neighbor,
-                                    g: g,
-                                    h: h + randomFactor,
-                                    parent: current
-                                });
-                            } else if (g < existing.g) {
-                                existing.g = g;
-                                existing.parent = current;
-                            }
-                        }
-                    }
-                }
-                
-                // If path is too short, try to make it more complex
-                if (path.length < this.gridSize) {
-                    // Add some detours
-                    const newPath = [path[0]];
-                    
-                    for (let i = 1; i < path.length; i++) {
-                        const prev = newPath[newPath.length - 1];
-                        const next = path[i];
-                        
-                        // Sometimes add a detour
-                        if (Math.random() < 0.3 && i < path.length - 1) {
-                            const midX = prev.x;
-                            const midY = next.y;
-                            
-                            if (!path.some(p => p.x === midX && p.y === midY)) {
-                                newPath.push({ x: midX, y: midY });
-                            }
-                        }
-                        
-                        newPath.push(next);
-                    }
-                    
-                    return newPath;
-                }
-                
-                return path;
-            }
-            
-            determinePipeTypeAndRotation(prev, curr, next) {
-                // Determine which directions we need to connect
-                const needsConnection = [false, false, false, false]; // [top, right, bottom, left]
-                
-                // Connection from previous
-                if (prev.x < curr.x) needsConnection[3] = true; // left
-                if (prev.x > curr.x) needsConnection[1] = true; // right
-                if (prev.y < curr.y) needsConnection[0] = true; // top
-                if (prev.y > curr.y) needsConnection[2] = true; // bottom
-                
-                // Connection to next
-                if (next.x < curr.x) needsConnection[3] = true; // left
-                if (next.x > curr.x) needsConnection[1] = true; // right
-                if (next.y < curr.y) needsConnection[0] = true; // top
-                if (next.y > curr.y) needsConnection[2] = true; // bottom
-                
-                // Find a pipe type that matches these connections
-                for (const [pipeType, pipeData] of Object.entries(this.pipeTypes)) {
-                    // Try all rotations
-                    for (let rotation = 0; rotation < 360; rotation += 90) {
-                        const rotatedConnections = this.getRotatedConnections(pipeType, rotation);
-                        
-                        // Check if this rotation matches what we need
-                        let matches = true;
-                        for (let i = 0; i < 4; i++) {
-                            if (needsConnection[i] && !rotatedConnections[i]) {
-                                matches = false;
-                                break;
-                            }
-                            if (!needsConnection[i] && rotatedConnections[i]) {
-                                // Only use exact matches for the solution path
-                                if (pipeType !== 'cross' && pipeType !== 'tee-t' && 
-                                    pipeType !== 'tee-b' && pipeType !== 'tee-l' && pipeType !== 'tee-r') {
-                                    matches = false;
-                                    break;
-                                }
-                            }
-                        }
-                        
-                        if (matches) {
-                            return { type: pipeType, rotation: rotation };
-                        }
-                    }
-                }
-                
-                // Fallback - this shouldn't happen
-                return { type: 'cross', rotation: 0 };
-            }
-            
-            rotatePipe(x, y) {
-                if (x < 0 || x >= this.gridSize || y < 0 || y >= this.gridSize) return;
-                
-                const pipe = this.grid[y][x];
-                if (pipe && !pipe.locked) {
-                    pipe.rotation = (pipe.rotation + 90) % 360;
-                    this.draw();
-                    
-                    // Add rotation animation
-                    const cellX = x * this.cellSize + this.cellSize / 2;
-                    const cellY = y * this.cellSize + this.cellSize / 2;
-                    this.addRotationEffect(cellX, cellY);
-                }
-            }
-            
-            addRotationEffect(x, y) {
-                const effect = {
-                    x: x,
-                    y: y,
-                    radius: 0,
-                    opacity: 1,
-                    maxRadius: this.cellSize / 2
-                };
-                
-                const animate = () => {
-                    effect.radius += 3;
-                    effect.opacity -= 0.05;
-                    
-                    this.ctx.save();
-                    this.ctx.strokeStyle = `rgba(255, 255, 255, ${effect.opacity})`;
-                    this.ctx.lineWidth = 2;
-                    this.ctx.beginPath();
-                    this.ctx.arc(effect.x, effect.y, effect.radius, 0, Math.PI * 2);
-                    this.ctx.stroke();
-                    this.ctx.restore();
-                    
-                    if (effect.opacity > 0) {
-                        requestAnimationFrame(animate);
-                    }
-                };
-                
-                animate();
-            }
-            
-            getRotatedConnections(pipeType, rotation) {
-                const pipe = this.pipeTypes[pipeType];
-                if (!pipe) return [0, 0, 0, 0];
-                
-                const rotations = rotation / 90;
-                const connections = [...pipe.connections];
-                
-                for (let i = 0; i < rotations; i++) {
-                    connections.unshift(connections.pop());
-                }
-                
-                return connections;
-            }
-            
-            checkSolution(verifyOnly = false) {
-                const visited = Array(this.gridSize).fill().map(() => 
-                    Array(this.gridSize).fill(false)
-                );
-                
-                const path = [];
-                const queue = [this.startPos];
-                visited[this.startPos.y][this.startPos.x] = true;
-                
-                while (queue.length > 0) {
-                    const current = queue.shift();
-                    path.push(current);
-                    
-                    if (current.x === this.endPos.x && current.y === this.endPos.y) {
-                        // Success!
-                        if (!verifyOnly) {
-                            this.onLevelComplete(path);
-                        }
-                        return true;
-                    }
-                    
-                    const currentPipe = this.grid[current.y][current.x];
-                    let connections;
-                    
-                    if (currentPipe.type === 'start') {
-                        // Start connects in all directions
-                        connections = [1, 1, 1, 1];
-                    } else if (currentPipe.type === 'end') {
-                        // End shouldn't be the current pipe when pathfinding
-                        connections = [0, 0, 0, 0];
-                    } else {
-                        connections = this.getRotatedConnections(currentPipe.type, currentPipe.rotation);
-                    }
-                    
-                    // Check all directions
-                    const directions = [
-                        { dx: 0, dy: -1, index: 0, opposite: 2 }, // top
-                        { dx: 1, dy: 0, index: 1, opposite: 3 },  // right
-                        { dx: 0, dy: 1, index: 2, opposite: 0 },  // bottom
-                        { dx: -1, dy: 0, index: 3, opposite: 1 }  // left
-                    ];
-                    
-                    for (const dir of directions) {
-                        if (connections[dir.index]) {
-                            const nextX = current.x + dir.dx;
-                            const nextY = current.y + dir.dy;
-                            
-                            if (nextX >= 0 && nextX < this.gridSize &&
-                                nextY >= 0 && nextY < this.gridSize &&
-                                !visited[nextY][nextX]) {
-                                
-                                const nextPipe = this.grid[nextY][nextX];
-                                let nextConnections;
-                                
-                                if (nextPipe.type === 'start') {
-                                    nextConnections = [0, 0, 0, 0];
-                                    // Start shouldn't be a next pipe in the path
-                                } else if (nextPipe.type === 'end') {
-                                    // End connects from any direction
-                                    nextConnections = [1, 1, 1, 1];
-                                } else {
-                                    nextConnections = this.getRotatedConnections(nextPipe.type, nextPipe.rotation);
-                                }
-                                
-                                if (nextConnections[dir.opposite]) {
-                                    visited[nextY][nextX] = true;
-                                    queue.push({ x: nextX, y: nextY });
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                if (!verifyOnly) {
-                    this.showMessage('No complete path found!', 'error');
-                }
-                return false;
-            }
-            
-            onLevelComplete(path) {
-                this.isFlowing = true;
-                // Higher score for larger grids and more complex paths
-                const complexityBonus = path.length * 10;
-                const sizeBonus = this.gridSize * 50;
-                const levelScore = 1000 + (this.level * 100) + complexityBonus + sizeBonus;
-                this.score += levelScore;
-                
-                this.showMessage(`Level ${this.level} Complete! +${levelScore} points`, 'success');
-                
-                // Animate flow
-                this.animateFlow(path, () => {
-                    setTimeout(() => {
-                        this.level++;
-                        this.generateNewLevel();
-                        this.updateStats();
-                    }, 2000);
-                });
-                
-                this.updateStats();
-            }
-            
-            animateFlow(path, callback) {
-                let progress = 0;
-                const animate = () => {
-                    progress += 0.02;
-                    
-                    if (progress >= 1) {
-                        if (callback) callback();
-                        return;
-                    }
-                    
-                    this.draw();
-                    
-                    // Draw flow
-                    this.ctx.strokeStyle = '#00f2fe';
-                    this.ctx.lineWidth = 4;
-                    this.ctx.lineCap = 'round';
-                    this.ctx.shadowBlur = 20;
-                    this.ctx.shadowColor = '#00f2fe';
-                    
-                    this.ctx.beginPath();
-                    const currentLength = path.length * progress;
-                    
-                    for (let i = 0; i < currentLength - 1; i++) {
-                        const start = path[i];
-                        const end = path[Math.min(i + 1, path.length - 1)];
-                        
-                        const startX = start.x * this.cellSize + this.cellSize / 2;
-                        const startY = start.y * this.cellSize + this.cellSize / 2;
-                        const endX = end.x * this.cellSize + this.cellSize / 2;
-                        const endY = end.y * this.cellSize + this.cellSize / 2;
-                        
-                        if (i === 0) {
-                            this.ctx.moveTo(startX, startY);
-                        }
-                        
-                        if (i < currentLength - 1) {
-                            this.ctx.lineTo(endX, endY);
-                        } else {
-                            // Partial line for smooth animation
-                            const partialProgress = currentLength - i - 1;
-                            const partialX = startX + (endX - startX) * partialProgress;
-                            const partialY = startY + (endY - startY) * partialProgress;
-                            this.ctx.lineTo(partialX, partialY);
-                        }
-                    }
-                    
-                    this.ctx.stroke();
-                    this.ctx.shadowBlur = 0;
-                    
-                    requestAnimationFrame(animate);
-                };
-                
-                animate();
-            }
-            
-            showHint() {
-                const hintCost = 50 + (this.level * 10); // Hints get more expensive
-                
-                if (this.score >= hintCost) {
-                    this.score -= hintCost;
-                    this.updateStats();
-                    
-                    // Find one incorrectly rotated solution pipe
-                    const incorrectPipes = [];
-                    
-                    for (let y = 0; y < this.gridSize; y++) {
-                        for (let x = 0; x < this.gridSize; x++) {
-                            const pipe = this.grid[y][x];
-                            if (pipe && pipe.isPartOfSolution && !pipe.locked) {
-                                const correctRotation = this.solutionRotations[`${x},${y}`];
-                                if (pipe.rotation !== correctRotation) {
-                                    incorrectPipes.push({ x, y, pipe });
-                                }
-                            }
-                        }
-                    }
-                    
-                    if (incorrectPipes.length > 0) {
-                        // Highlight just one incorrect pipe
-                        const hint = incorrectPipes[Math.floor(Math.random() * incorrectPipes.length)];
-                        
-                        this.draw();
-                        
-                        // Draw pulsing highlight
-                        const pulse = () => {
-                            let opacity = 0;
-                            let increasing = true;
-                            let frame = 0;
-                            
-                            const animate = () => {
-                                if (frame > 60) return; // Stop after ~1 second
-                                
-                                this.draw();
-                                
-                                if (increasing) {
-                                    opacity += 0.05;
-                                    if (opacity >= 0.5) increasing = false;
-                                } else {
-                                    opacity -= 0.05;
-                                    if (opacity <= 0) increasing = true;
-                                }
-                                
-                                this.ctx.fillStyle = `rgba(255, 255, 0, ${opacity})`;
-                                this.ctx.fillRect(
-                                    hint.x * this.cellSize,
-                                    hint.y * this.cellSize,
-                                    this.cellSize,
-                                    this.cellSize
-                                );
-                                
-                                frame++;
-                                requestAnimationFrame(animate);
-                            };
-                            
-                            animate();
-                        };
-                        
-                        pulse();
-                        this.showMessage('Check this pipe!', 'hint');
-                    } else {
-                        this.showMessage('All pipes are correctly positioned!', 'success');
-                    }
-                } else {
-                    this.showMessage('Not enough score for hint!', 'error');
-                }
-            }
-            
-            draw() {
-                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-                
-                // Draw grid
-                for (let y = 0; y < this.gridSize; y++) {
-                    for (let x = 0; x < this.gridSize; x++) {
-                        const pipe = this.grid[y][x];
-                        if (pipe) {
-                            this.drawCell(x, y, pipe);
-                        }
-                    }
-                }
-            }
-            
-            drawCell(x, y, pipe) {
-                const centerX = x * this.cellSize + this.cellSize / 2;
-                const centerY = y * this.cellSize + this.cellSize / 2;
-                
-                // Draw cell background
-                this.ctx.fillStyle = pipe.locked ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.05)';
-                this.ctx.fillRect(x * this.cellSize, y * this.cellSize, this.cellSize, this.cellSize);
-                
-                // Draw cell border
-                this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-                this.ctx.lineWidth = 1;
-                this.ctx.strokeRect(x * this.cellSize, y * this.cellSize, this.cellSize, this.cellSize);
-                
-                this.ctx.save();
-                this.ctx.translate(centerX, centerY);
-                this.ctx.rotate(pipe.rotation * Math.PI / 180);
-                
-                if (pipe.type === 'start') {
-                    // Draw start
-                    this.ctx.fillStyle = '#4ade80';
-                    this.ctx.beginPath();
-                    this.ctx.arc(0, 0, this.cellSize / 3, 0, Math.PI * 2);
-                    this.ctx.fill();
-                    
-                    // Find which direction to draw the connection
-                    this.ctx.strokeStyle = '#4ade80';
-                    this.ctx.lineWidth = 6;
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(0, 0);
-                    
-                    // Check adjacent solution pipes
-                    for (let dy = -1; dy <= 1; dy++) {
-                        for (let dx = -1; dx <= 1; dx++) {
-                            if (Math.abs(dx) + Math.abs(dy) === 1) {
-                                const checkX = x + dx;
-                                const checkY = y + dy;
-                                if (checkX >= 0 && checkX < this.gridSize && 
-                                    checkY >= 0 && checkY < this.gridSize) {
-                                    const adjacentPipe = this.grid[checkY][checkX];
-                                    if (adjacentPipe && adjacentPipe.isPartOfSolution) {
-                                        this.ctx.lineTo(dx * this.cellSize / 2, dy * this.cellSize / 2);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    this.ctx.stroke();
-                } else if (pipe.type === 'end') {
-                    // Draw end
-                    this.ctx.fillStyle = '#f87171';
-                    this.ctx.beginPath();
-                    this.ctx.arc(0, 0, this.cellSize / 3, 0, Math.PI * 2);
-                    this.ctx.fill();
-                    
-                    // Find which direction to draw the connection
-                    this.ctx.strokeStyle = '#f87171';
-                    this.ctx.lineWidth = 6;
-                    
-                    // Check adjacent solution pipes
-                    for (let dy = -1; dy <= 1; dy++) {
-                        for (let dx = -1; dx <= 1; dx++) {
-                            if (Math.abs(dx) + Math.abs(dy) === 1) {
-                                const checkX = x + dx;
-                                const checkY = y + dy;
-                                if (checkX >= 0 && checkX < this.gridSize && 
-                                    checkY >= 0 && checkY < this.gridSize) {
-                                    const adjacentPipe = this.grid[checkY][checkX];
-                                    if (adjacentPipe && adjacentPipe.isPartOfSolution) {
-                                        this.ctx.beginPath();
-                                        this.ctx.moveTo(dx * this.cellSize / 2, dy * this.cellSize / 2);
-                                        this.ctx.lineTo(0, 0);
-                                        this.ctx.stroke();
-                                    }
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    // Draw pipe
-                    this.drawPipe(pipe.type);
-                }
-                
-                this.ctx.restore();
-            }
-            
-            drawPipe(type) {
-                // All pipes now have the same color to make it harder
-                this.ctx.strokeStyle = '#60a5fa';
-                this.ctx.lineWidth = 6;
-                this.ctx.lineCap = 'round';
-                
-                // Add subtle glow effect
-                this.ctx.shadowBlur = 10;
-                this.ctx.shadowColor = '#60a5fa';
-                
-                const size = this.cellSize / 2;
-                
-                switch(type) {
-                    case 'straight-h':
-                        this.ctx.beginPath();
-                        this.ctx.moveTo(-size, 0);
-                        this.ctx.lineTo(size, 0);
-                        this.ctx.stroke();
-                        break;
-                        
-                    case 'straight-v':
-                        this.ctx.beginPath();
-                        this.ctx.moveTo(0, -size);
-                        this.ctx.lineTo(0, size);
-                        this.ctx.stroke();
-                        break;
-                        
-                    case 'corner-tl':
-                        this.ctx.beginPath();
-                        this.ctx.moveTo(0, -size);
-                        this.ctx.lineTo(0, 0);
-                        this.ctx.lineTo(-size, 0);
-                        this.ctx.stroke();
-                        break;
-                        
-                    case 'corner-tr':
-                        this.ctx.beginPath();
-                        this.ctx.moveTo(0, -size);
-                        this.ctx.lineTo(0, 0);
-                        this.ctx.lineTo(size, 0);
-                        this.ctx.stroke();
-                        break;
-                        
-                    case 'corner-bl':
-                        this.ctx.beginPath();
-                        this.ctx.moveTo(0, size);
-                        this.ctx.lineTo(0, 0);
-                        this.ctx.lineTo(-size, 0);
-                        this.ctx.stroke();
-                        break;
-                        
-                    case 'corner-br':
-                        this.ctx.beginPath();
-                        this.ctx.moveTo(0, size);
-                        this.ctx.lineTo(0, 0);
-                        this.ctx.lineTo(size, 0);
-                        this.ctx.stroke();
-                        break;
-                        
-                    case 'cross':
-                        this.ctx.beginPath();
-                        this.ctx.moveTo(-size, 0);
-                        this.ctx.lineTo(size, 0);
-                        this.ctx.moveTo(0, -size);
-                        this.ctx.lineTo(0, size);
-                        this.ctx.stroke();
-                        break;
-                        
-                    case 'tee-t':
-                        this.ctx.beginPath();
-                        this.ctx.moveTo(-size, 0);
-                        this.ctx.lineTo(size, 0);
-                        this.ctx.moveTo(0, 0);
-                        this.ctx.lineTo(0, size);
-                        this.ctx.stroke();
-                        break;
-                        
-                    case 'tee-b':
-                        this.ctx.beginPath();
-                        this.ctx.moveTo(-size, 0);
-                        this.ctx.lineTo(size, 0);
-                        this.ctx.moveTo(0, 0);
-                        this.ctx.lineTo(0, -size);
-                        this.ctx.stroke();
-                        break;
-                        
-                    case 'tee-l':
-                        this.ctx.beginPath();
-                        this.ctx.moveTo(0, -size);
-                        this.ctx.lineTo(0, size);
-                        this.ctx.moveTo(0, 0);
-                        this.ctx.lineTo(-size, 0);
-                        this.ctx.stroke();
-                        break;
-                        
-                    case 'tee-r':
-                        this.ctx.beginPath();
-                        this.ctx.moveTo(0, -size);
-                        this.ctx.lineTo(0, size);
-                        this.ctx.moveTo(0, 0);
-                        this.ctx.lineTo(size, 0);
-                        this.ctx.stroke();
-                        break;
-                }
-                
-                // Draw connection points
-                this.ctx.fillStyle = '#60a5fa';
-                const connections = this.pipeTypes[type].connections;
-                const positions = [
-                    { x: 0, y: -size }, // top
-                    { x: size, y: 0 },  // right
-                    { x: 0, y: size },  // bottom
-                    { x: -size, y: 0 }  // left
-                ];
-                
-                connections.forEach((connected, i) => {
-                    if (connected) {
-                        this.ctx.beginPath();
-                        this.ctx.arc(positions[i].x, positions[i].y, 3, 0, Math.PI * 2);
-                        this.ctx.fill();
-                    }
-                });
-            }
-            
-            updateStats() {
-                document.getElementById('level').textContent = this.level;
-                document.getElementById('score').textContent = this.score;
-            }
-            
-            updateTimer() {
-                const elapsed = Math.floor((Date.now() - this.startTime) / 1000);
-                const minutes = Math.floor(elapsed / 60);
-                const seconds = elapsed % 60;
-                document.getElementById('time').textContent = 
-                    `${minutes}:${seconds.toString().padStart(2, '0')}`;
-                
-                setTimeout(() => this.updateTimer(), 1000);
-            }
-            
-            showMessage(text, type = '') {
-                const messageEl = document.getElementById('message');
-                messageEl.textContent = text;
-                messageEl.className = 'message ' + type;
-            }
-            
-            animate() {
-                this.flowAnimation += 0.1;
-                this.draw();
-                requestAnimationFrame(() => this.animate());
             }
         }
-        
-        // Start the game
-        const game = new PipePuzzleGame();
-        
-        // Handle window resize
-        window.addEventListener('resize', () => {
-            particlesCanvas.width = window.innerWidth;
-            particlesCanvas.height = window.innerHeight;
+        this.verifySolution();
+        this.isFlowing = false;
+        this.showMessage('');
+    }
+
+    getRandomStartEndPositions() {
+        const edges = [];
+        for (let x = 0; x < this.gridSize; x++) {
+            edges.push({ x, y: 0 });
+            edges.push({ x, y: this.gridSize - 1 });
+        }
+        for (let y = 1; y < this.gridSize - 1; y++) {
+            edges.push({ x: 0, y });
+            edges.push({ x: this.gridSize - 1, y });
+        }
+        const shuffled = edges.sort(() => Math.random() - 0.5);
+        let start = shuffled[0];
+        let end = shuffled[1];
+        while (Math.abs(start.x - end.x) + Math.abs(start.y - end.y) < this.gridSize / 2) {
+            shuffled.sort(() => Math.random() - 0.5);
+            start = shuffled[0];
+            end = shuffled[1];
+        }
+        return { start, end };
+    }
+
+    addDeceptivePaths(solutionCells) {
+        const numDeceptivePaths = Math.min(2 + Math.floor(this.level / 3), 5);
+        for (let i = 0; i < numDeceptivePaths; i++) {
+            let startX, startY;
+            if (Math.random() < 0.5) {
+                const solutionArray = Array.from(solutionCells);
+                const randomCell = solutionArray[Math.floor(Math.random() * solutionArray.length)];
+                const [x, y] = randomCell.split(',').map(Number);
+                const adjacents = [
+                    { x: x + 1, y }, { x: x - 1, y },
+                    { x, y: y + 1 }, { x, y: y - 1 }
+                ].filter(pos =>
+                    pos.x >= 0 && pos.x < this.gridSize &&
+                    pos.y >= 0 && pos.y < this.gridSize &&
+                    !this.grid[pos.y][pos.x]
+                );
+                if (adjacents.length > 0) {
+                    const adj = adjacents[Math.floor(Math.random() * adjacents.length)];
+                    startX = adj.x;
+                    startY = adj.y;
+                } else {
+                    continue;
+                }
+            } else {
+                do {
+                    startX = Math.floor(Math.random() * this.gridSize);
+                    startY = Math.floor(Math.random() * this.gridSize);
+                } while (this.grid[startY][startX]);
+            }
+            const pathLength = Math.min(3 + Math.floor(Math.random() * 4) + Math.floor(this.level / 5), 8);
+            let currentX = startX, currentY = startY, prevDir = null;
+            for (let j = 0; j < pathLength; j++) {
+                if (this.grid[currentY][currentX]) break;
+                const possibleDirs = [
+                    { dx: 1, dy: 0 }, { dx: -1, dy: 0 },
+                    { dx: 0, dy: 1 }, { dx: 0, dy: -1 }
+                ].filter(dir => {
+                    const newX = currentX + dir.dx, newY = currentY + dir.dy;
+                    return newX >= 0 && newX < this.gridSize &&
+                        newY >= 0 && newY < this.gridSize &&
+                        !this.grid[newY][newX];
+                });
+                if (possibleDirs.length === 0) break;
+                const nextDir = possibleDirs[Math.floor(Math.random() * possibleDirs.length)];
+                let pipeType;
+                if (!prevDir) {
+                    pipeType = Math.random() < 0.5 ?
+                        (nextDir.dx !== 0 ? 'straight-h' : 'straight-v') :
+                        ['corner-tl', 'corner-tr', 'corner-bl', 'corner-br'][Math.floor(Math.random() * 4)];
+                } else if (prevDir.dx === -nextDir.dx && prevDir.dy === -nextDir.dy) {
+                    pipeType = nextDir.dx !== 0 ? 'straight-h' : 'straight-v';
+                } else {
+                    if (prevDir.dx === -1 && nextDir.dy === -1) pipeType = 'corner-br';
+                    else if (prevDir.dx === -1 && nextDir.dy === 1) pipeType = 'corner-tr';
+                    else if (prevDir.dx === 1 && nextDir.dy === -1) pipeType = 'corner-bl';
+                    else if (prevDir.dx === 1 && nextDir.dy === 1) pipeType = 'corner-tl';
+                    else if (prevDir.dy === -1 && nextDir.dx === -1) pipeType = 'corner-br';
+                    else if (prevDir.dy === -1 && nextDir.dx === 1) pipeType = 'corner-bl';
+                    else if (prevDir.dy === 1 && nextDir.dx === -1) pipeType = 'corner-tr';
+                    else if (prevDir.dy === 1 && nextDir.dx === 1) pipeType = 'corner-tl';
+                    else pipeType = 'cross';
+                }
+                this.grid[currentY][currentX] = {
+                    type: pipeType,
+                    rotation: Math.floor(Math.random() * 4) * 90,
+                    locked: false,
+                    isPartOfSolution: false,
+                    isDeceptive: true
+                };
+                currentX += nextDir.dx;
+                currentY += nextDir.dy;
+                prevDir = nextDir;
+            }
+        }
+    }
+
+    chooseConfusingPipe(x, y) {
+        const neighbors = [
+            { x: x + 1, y, dir: 'right' },
+            { x: x - 1, y, dir: 'left' },
+            { x, y: y + 1, dir: 'bottom' },
+            { x, y: y - 1, dir: 'top' }
+        ];
+        const validNeighbors = neighbors.filter(n =>
+            n.x >= 0 && n.x < this.gridSize &&
+            n.y >= 0 && n.y < this.gridSize &&
+            this.grid[n.y][n.x]
+        );
+        if (validNeighbors.length === 0) {
+            const types = ['straight-h', 'straight-v', 'corner-tl', 'corner-tr', 'corner-bl', 'corner-br'];
+            return types[Math.floor(Math.random() * types.length)];
+        }
+        if (validNeighbors.length === 1) {
+            const options = ['straight-h', 'straight-v', 'corner-tl', 'corner-tr', 'corner-bl', 'corner-br'];
+            return options[Math.floor(Math.random() * options.length)];
+        } else if (validNeighbors.length === 2) {
+            const options = ['straight-h', 'straight-v', 'corner-tl', 'corner-tr', 'corner-bl', 'corner-br',
+                'tee-t', 'tee-b', 'tee-l', 'tee-r'];
+            return options[Math.floor(Math.random() * options.length)];
+        } else {
+            const options = ['tee-t', 'tee-b', 'tee-l', 'tee-r', 'cross'];
+            return options[Math.floor(Math.random() * options.length)];
+        }
+    }
+
+    verifySolution() {
+        const originalRotations = {};
+        for (let y = 0; y < this.gridSize; y++) {
+            for (let x = 0; x < this.gridSize; x++) {
+                const pipe = this.grid[y][x];
+                if (pipe && pipe.isPartOfSolution) {
+                    originalRotations[`${x},${y}`] = pipe.rotation;
+                    pipe.rotation = this.solutionRotations[`${x},${y}`] || 0;
+                }
+            }
+        }
+        const isSolvable = this.checkSolution(true);
+        for (const [key, rotation] of Object.entries(originalRotations)) {
+            const [x, y] = key.split(',').map(Number);
+            this.grid[y][x].rotation = rotation;
+        }
+        if (!isSolvable) {
+            console.error('Generated unsolvable puzzle! Regenerating...');
+            this.generateNewLevel();
+        }
+    }
+
+    generateSolutionPath() {
+        const path = [];
+        const visited = Array(this.gridSize).fill().map(() => Array(this.gridSize).fill(false));
+        const openSet = [{
+            pos: this.startPos,
+            g: 0,
+            h: Math.abs(this.endPos.x - this.startPos.x) + Math.abs(this.endPos.y - this.startPos.y),
+            parent: null
+        }];
+        const closedSet = new Set();
+        while (openSet.length > 0) {
+            openSet.sort((a, b) => (a.g + a.h) - (b.g + b.h));
+            const current = openSet.shift();
+            if (current.pos.x === this.endPos.x && current.pos.y === this.endPos.y) {
+                let node = current;
+                while (node) {
+                    path.unshift(node.pos);
+                    node = node.parent;
+                }
+                break;
+            }
+            closedSet.add(`${current.pos.x},${current.pos.y}`);
+            const neighbors = [
+                { x: current.pos.x + 1, y: current.pos.y },
+                { x: current.pos.x - 1, y: current.pos.y },
+                { x: current.pos.x, y: current.pos.y + 1 },
+                { x: current.pos.x, y: current.pos.y - 1 }
+            ];
+            for (const neighbor of neighbors) {
+                if (neighbor.x >= 0 && neighbor.x < this.gridSize &&
+                    neighbor.y >= 0 && neighbor.y < this.gridSize &&
+                    !closedSet.has(`${neighbor.x},${neighbor.y}`)) {
+                    const g = current.g + 1;
+                    const h = Math.abs(this.endPos.x - neighbor.x) + Math.abs(this.endPos.y - neighbor.y);
+                    const randomFactor = Math.random() * (3 + this.level * 0.2);
+                    const existing = openSet.find(n => n.pos.x === neighbor.x && n.pos.y === neighbor.y);
+                    if (!existing) {
+                        openSet.push({
+                            pos: neighbor,
+                            g: g,
+                            h: h + randomFactor,
+                            parent: current
+                        });
+                    } else if (g < existing.g) {
+                        existing.g = g;
+                        existing.parent = current;
+                    }
+                }
+            }
+        }
+        if (path.length < this.gridSize) {
+            const newPath = [path[0]];
+            for (let i = 1; i < path.length; i++) {
+                const prev = newPath[newPath.length - 1];
+                const next = path[i];
+                if (Math.random() < 0.3 && i < path.length - 1) {
+                    const midX = prev.x, midY = next.y;
+                    if (!path.some(p => p.x === midX && p.y === midY)) {
+                        newPath.push({ x: midX, y: midY });
+                    }
+                }
+                newPath.push(next);
+            }
+            return newPath;
+        }
+        return path;
+    }
+
+    determinePipeTypeAndRotation(prev, curr, next) {
+        const needsConnection = [false, false, false, false]; // [top, right, bottom, left]
+        if (prev.x < curr.x) needsConnection[3] = true;
+        if (prev.x > curr.x) needsConnection[1] = true;
+        if (prev.y < curr.y) needsConnection[0] = true;
+        if (prev.y > curr.y) needsConnection[2] = true;
+        if (next.x < curr.x) needsConnection[3] = true;
+        if (next.x > curr.x) needsConnection[1] = true;
+        if (next.y < curr.y) needsConnection[0] = true;
+        if (next.y > curr.y) needsConnection[2] = true;
+        for (const [pipeType, pipeData] of Object.entries(this.pipeTypes)) {
+            for (let rotation = 0; rotation < 360; rotation += 90) {
+                const rotatedConnections = this.getRotatedConnections(pipeType, rotation);
+                let matches = true;
+                for (let i = 0; i < 4; i++) {
+                    if (needsConnection[i] && !rotatedConnections[i]) {
+                        matches = false;
+                        break;
+                    }
+                    if (!needsConnection[i] && rotatedConnections[i]) {
+                        if (pipeType !== 'cross' && pipeType !== 'tee-t' &&
+                            pipeType !== 'tee-b' && pipeType !== 'tee-l' && pipeType !== 'tee-r') {
+                            matches = false;
+                            break;
+                        }
+                    }
+                }
+                if (matches) {
+                    return { type: pipeType, rotation: rotation };
+                }
+            }
+        }
+        return { type: 'cross', rotation: 0 };
+    }
+        rotatePipe(x, y) {
+        if (x < 0 || x >= this.gridSize || y < 0 || y >= this.gridSize) return;
+        const pipe = this.grid[y][x];
+        if (pipe && !pipe.locked) {
+            pipe.rotation = (pipe.rotation + 90) % 360;
+            this.draw();
+            // Add rotation animation
+            const cellX = x * this.cellSize + this.cellSize / 2;
+            const cellY = y * this.cellSize + this.cellSize / 2;
+            this.addRotationEffect(cellX, cellY);
+        }
+    }
+
+    addRotationEffect(x, y) {
+        const effect = {
+            x: x,
+            y: y,
+            radius: 0,
+            opacity: 1,
+            maxRadius: this.cellSize / 2
+        };
+        const animate = () => {
+            effect.radius += 3;
+            effect.opacity -= 0.05;
+            this.ctx.save();
+            this.ctx.strokeStyle = `rgba(255, 255, 255, ${effect.opacity})`;
+            this.ctx.lineWidth = 2;
+            this.ctx.beginPath();
+            this.ctx.arc(effect.x, effect.y, effect.radius, 0, Math.PI * 2);
+            this.ctx.stroke();
+            this.ctx.restore();
+            if (effect.opacity > 0) {
+                requestAnimationFrame(animate);
+            }
+        };
+        animate();
+    }
+
+    getRotatedConnections(pipeType, rotation) {
+        const pipe = this.pipeTypes[pipeType];
+        if (!pipe) return [0, 0, 0, 0];
+        const rotations = rotation / 90;
+        const connections = [...pipe.connections];
+        for (let i = 0; i < rotations; i++) {
+            connections.unshift(connections.pop());
+        }
+        return connections;
+    }
+
+    checkSolution(verifyOnly = false) {
+        const visited = Array(this.gridSize).fill().map(() => Array(this.gridSize).fill(false));
+        const path = [];
+        const queue = [this.startPos];
+        visited[this.startPos.y][this.startPos.x] = true;
+        while (queue.length > 0) {
+            const current = queue.shift();
+            path.push(current);
+            if (current.x === this.endPos.x && current.y === this.endPos.y) {
+                if (!verifyOnly) {
+                    this.onLevelComplete(path);
+                }
+                return true;
+            }
+            const currentPipe = this.grid[current.y][current.x];
+            let connections;
+            if (currentPipe.type === 'start') {
+                connections = [1, 1, 1, 1];
+            } else if (currentPipe.type === 'end') {
+                connections = [0, 0, 0, 0];
+            } else {
+                connections = this.getRotatedConnections(currentPipe.type, currentPipe.rotation);
+            }
+            const directions = [
+                { dx: 0, dy: -1, index: 0, opposite: 2 }, // top
+                { dx: 1, dy: 0, index: 1, opposite: 3 },  // right
+                { dx: 0, dy: 1, index: 2, opposite: 0 },  // bottom
+                { dx: -1, dy: 0, index: 3, opposite: 1 }  // left
+            ];
+            for (const dir of directions) {
+                if (connections[dir.index]) {
+                    const nextX = current.x + dir.dx;
+                    const nextY = current.y + dir.dy;
+                    if (nextX >= 0 && nextX < this.gridSize &&
+                        nextY >= 0 && nextY < this.gridSize &&
+                        !visited[nextY][nextX]) {
+                        const nextPipe = this.grid[nextY][nextX];
+                        let nextConnections;
+                        if (nextPipe.type === 'start') {
+                            nextConnections = [0, 0, 0, 0];
+                        } else if (nextPipe.type === 'end') {
+                            nextConnections = [1, 1, 1, 1];
+                        } else {
+                            nextConnections = this.getRotatedConnections(nextPipe.type, nextPipe.rotation);
+                        }
+                        if (nextConnections[dir.opposite]) {
+                            visited[nextY][nextX] = true;
+                            queue.push({ x: nextX, y: nextY });
+                        }
+                    }
+                }
+            }
+        }
+        if (!verifyOnly) {
+            this.showMessage('No complete path found!', 'error');
+        }
+        return false;
+    }
+
+    onLevelComplete(path) {
+        this.isFlowing = true;
+        const complexityBonus = path.length * 10;
+        const sizeBonus = this.gridSize * 50;
+        const levelScore = 1000 + (this.level * 100) + complexityBonus + sizeBonus;
+        this.score += levelScore;
+        this.showMessage(`Level ${this.level} Complete! +${levelScore} points`, 'success');
+        this.animateFlow(path, () => {
+            setTimeout(() => {
+                this.level++;
+                this.generateNewLevel();
+                this.updateStats();
+            }, 2000);
         });
+        this.updateStats();
+    }
+
+    animateFlow(path, callback) {
+        let progress = 0;
+        const animate = () => {
+            progress += 0.02;
+            if (progress >= 1) {
+                if (callback) callback();
+                return;
+            }
+            this.draw();
+            // Draw flow
+            this.ctx.strokeStyle = '#00f2fe';
+            this.ctx.lineWidth = 4;
+            this.ctx.lineCap = 'round';
+            this.ctx.shadowBlur = 20;
+            this.ctx.shadowColor = '#00f2fe';
+            this.ctx.beginPath();
+            const currentLength = path.length * progress;
+            for (let i = 0; i < currentLength - 1; i++) {
+                const start = path[i];
+                const end = path[Math.min(i + 1, path.length - 1)];
+                const startX = start.x * this.cellSize + this.cellSize / 2;
+                const startY = start.y * this.cellSize + this.cellSize / 2;
+                const endX = end.x * this.cellSize + this.cellSize / 2;
+                const endY = end.y * this.cellSize + this.cellSize / 2;
+                if (i === 0) {
+                    this.ctx.moveTo(startX, startY);
+                }
+                if (i < currentLength - 1) {
+                    this.ctx.lineTo(endX, endY);
+                } else {
+                    const partialProgress = currentLength - i - 1;
+                    const partialX = startX + (endX - startX) * partialProgress;
+                    const partialY = startY + (endY - startY) * partialProgress;
+                    this.ctx.lineTo(partialX, partialY);
+                }
+            }
+            this.ctx.stroke();
+            this.ctx.shadowBlur = 0;
+            requestAnimationFrame(animate);
+        };
+        animate();
+    }
+        showHint() {
+        const hintCost = 50 + (this.level * 10); // Hints get more expensive
+        if (this.score >= hintCost) {
+            this.score -= hintCost;
+            this.updateStats();
+            // Find one incorrectly rotated solution pipe
+            const incorrectPipes = [];
+            for (let y = 0; y < this.gridSize; y++) {
+                for (let x = 0; x < this.gridSize; x++) {
+                    const pipe = this.grid[y][x];
+                    if (pipe && pipe.isPartOfSolution && !pipe.locked) {
+                        const correctRotation = this.solutionRotations[`${x},${y}`];
+                        if (pipe.rotation !== correctRotation) {
+                            incorrectPipes.push({ x, y, pipe });
+                        }
+                    }
+                }
+            }
+            if (incorrectPipes.length > 0) {
+                // Highlight just one incorrect pipe
+                const hint = incorrectPipes[Math.floor(Math.random() * incorrectPipes.length)];
+                this.draw();
+                // Draw pulsing highlight
+                const pulse = () => {
+                    let opacity = 0;
+                    let increasing = true;
+                    let frame = 0;
+                    const animate = () => {
+                        if (frame > 60) return; // Stop after ~1 second
+                        this.draw();
+                        if (increasing) {
+                            opacity += 0.05;
+                            if (opacity >= 0.5) increasing = false;
+                        } else {
+                            opacity -= 0.05;
+                            if (opacity <= 0) increasing = true;
+                        }
+                        this.ctx.fillStyle = `rgba(255, 255, 0, ${opacity})`;
+                        this.ctx.fillRect(
+                            hint.x * this.cellSize,
+                            hint.y * this.cellSize,
+                            this.cellSize,
+                            this.cellSize
+                        );
+                        frame++;
+                        requestAnimationFrame(animate);
+                    };
+                    animate();
+                };
+                pulse();
+                this.showMessage('Check this pipe!', 'hint');
+            } else {
+                this.showMessage('All pipes are correctly positioned!', 'success');
+            }
+        } else {
+            this.showMessage('Not enough score for hint!', 'error');
+        }
+    }
+
+    draw() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        // Draw grid
+        for (let y = 0; y < this.gridSize; y++) {
+            for (let x = 0; x < this.gridSize; x++) {
+                const pipe = this.grid[y][x];
+                if (pipe) {
+                    this.drawCell(x, y, pipe);
+                }
+            }
+        }
+    }
+
+    drawCell(x, y, pipe) {
+        const centerX = x * this.cellSize + this.cellSize / 2;
+        const centerY = y * this.cellSize + this.cellSize / 2;
+        // Draw cell background
+        this.ctx.fillStyle = pipe.locked ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.05)';
+        this.ctx.fillRect(x * this.cellSize, y * this.cellSize, this.cellSize, this.cellSize);
+        // Draw cell border
+        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+        this.ctx.lineWidth = 1;
+        this.ctx.strokeRect(x * this.cellSize, y * this.cellSize, this.cellSize, this.cellSize);
+        this.ctx.save();
+        this.ctx.translate(centerX, centerY);
+        this.ctx.rotate(pipe.rotation * Math.PI / 180);
+        if (pipe.type === 'start') {
+            // Draw start
+            this.ctx.fillStyle = '#4ade80';
+            this.ctx.beginPath();
+            this.ctx.arc(0, 0, this.cellSize / 3, 0, Math.PI * 2);
+            this.ctx.fill();
+            // Find which direction to draw the connection
+            this.ctx.strokeStyle = '#4ade80';
+            this.ctx.lineWidth = 6;
+            this.ctx.beginPath();
+            this.ctx.moveTo(0, 0);
+            for (let dy = -1; dy <= 1; dy++) {
+                for (let dx = -1; dx <= 1; dx++) {
+                    if (Math.abs(dx) + Math.abs(dy) === 1) {
+                        const checkX = x + dx;
+                        const checkY = y + dy;
+                        if (checkX >= 0 && checkX < this.gridSize &&
+                            checkY >= 0 && checkY < this.gridSize) {
+                            const adjacentPipe = this.grid[checkY][checkX];
+                            if (adjacentPipe && adjacentPipe.isPartOfSolution) {
+                                this.ctx.lineTo(dx * this.cellSize / 2, dy * this.cellSize / 2);
+                            }
+                        }
+                    }
+                }
+            }
+            this.ctx.stroke();
+        } else if (pipe.type === 'end') {
+            // Draw end
+            this.ctx.fillStyle = '#f87171';
+            this.ctx.beginPath();
+            this.ctx.arc(0, 0, this.cellSize / 3, 0, Math.PI * 2);
+            this.ctx.fill();
+            // Find which direction to draw the connection
+            this.ctx.strokeStyle = '#f87171';
+            this.ctx.lineWidth = 6;
+            for (let dy = -1; dy <= 1; dy++) {
+                for (let dx = -1; dx <= 1; dx++) {
+                    if (Math.abs(dx) + Math.abs(dy) === 1) {
+                        const checkX = x + dx;
+                        const checkY = y + dy;
+                        if (checkX >= 0 && checkX < this.gridSize &&
+                            checkY >= 0 && checkY < this.gridSize) {
+                            const adjacentPipe = this.grid[checkY][checkX];
+                            if (adjacentPipe && adjacentPipe.isPartOfSolution) {
+                                this.ctx.beginPath();
+                                this.ctx.moveTo(dx * this.cellSize / 2, dy * this.cellSize / 2);
+                                this.ctx.lineTo(0, 0);
+                                this.ctx.stroke();
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            // Draw pipe
+            this.drawPipe(pipe.type);
+        }
+        this.ctx.restore();
+    }
+
+    drawPipe(type) {
+        this.ctx.strokeStyle = '#60a5fa';
+        this.ctx.lineWidth = 6;
+        this.ctx.lineCap = 'round';
+        this.ctx.shadowBlur = 10;
+        this.ctx.shadowColor = '#60a5fa';
+        const size = this.cellSize / 2;
+        switch (type) {
+            case 'straight-h':
+                this.ctx.beginPath();
+                this.ctx.moveTo(-size, 0);
+                this.ctx.lineTo(size, 0);
+                this.ctx.stroke();
+                break;
+            case 'straight-v':
+                this.ctx.beginPath();
+                this.ctx.moveTo(0, -size);
+                this.ctx.lineTo(0, size);
+                this.ctx.stroke();
+                break;
+            case 'corner-tl':
+                this.ctx.beginPath();
+                this.ctx.moveTo(0, -size);
+                this.ctx.lineTo(0, 0);
+                this.ctx.lineTo(-size, 0);
+                this.ctx.stroke();
+                break;
+            case 'corner-tr':
+                this.ctx.beginPath();
+                this.ctx.moveTo(0, -size);
+                this.ctx.lineTo(0, 0);
+                this.ctx.lineTo(size, 0);
+                this.ctx.stroke();
+                break;
+            case 'corner-bl':
+                this.ctx.beginPath();
+                this.ctx.moveTo(0, size);
+                this.ctx.lineTo(0, 0);
+                this.ctx.lineTo(-size, 0);
+                this.ctx.stroke();
+                break;
+            case 'corner-br':
+                this.ctx.beginPath();
+                this.ctx.moveTo(0, size);
+                this.ctx.lineTo(0, 0);
+                this.ctx.lineTo(size, 0);
+                this.ctx.stroke();
+                break;
+            case 'cross':
+                this.ctx.beginPath();
+                this.ctx.moveTo(-size, 0);
+                this.ctx.lineTo(size, 0);
+                this.ctx.moveTo(0, -size);
+                this.ctx.lineTo(0, size);
+                this.ctx.stroke();
+                break;
+            case 'tee-t':
+                this.ctx.beginPath();
+                this.ctx.moveTo(-size, 0);
+                this.ctx.lineTo(size, 0);
+                this.ctx.moveTo(0, 0);
+                this.ctx.lineTo(0, size);
+                this.ctx.stroke();
+                break;
+            case 'tee-b':
+                this.ctx.beginPath();
+                this.ctx.moveTo(-size, 0);
+                this.ctx.lineTo(size, 0);
+                this.ctx.moveTo(0, 0);
+                this.ctx.lineTo(0, -size);
+                this.ctx.stroke();
+                break;
+            case 'tee-l':
+                this.ctx.beginPath();
+                this.ctx.moveTo(0, -size);
+                this.ctx.lineTo(0, size);
+                this.ctx.moveTo(0, 0);
+                this.ctx.lineTo(-size, 0);
+                this.ctx.stroke();
+                break;
+            case 'tee-r':
+                this.ctx.beginPath();
+                this.ctx.moveTo(0, -size);
+                this.ctx.lineTo(0, size);
+                this.ctx.moveTo(0, 0);
+                this.ctx.lineTo(size, 0);
+                this.ctx.stroke();
+                break;
+        }
+        this.ctx.fillStyle = '#60a5fa';
+        const connections = this.pipeTypes[type].connections;
+        const positions = [
+            { x: 0, y: -size }, // top
+            { x: size, y: 0 },  // right
+            { x: 0, y: size },  // bottom
+            { x: -size, y: 0 }  // left
+        ];
+        connections.forEach((connected, i) => {
+            if (connected) {
+                this.ctx.beginPath();
+                this.ctx.arc(positions[i].x, positions[i].y, 3, 0, Math.PI * 2);
+                this.ctx.fill();
+            }
+        });
+        this.ctx.shadowBlur = 0;
+    }
+
+    updateStats() {
+        document.getElementById('level').textContent = this.level;
+        document.getElementById('score').textContent = this.score;
+    }
+
+    updateTimer() {
+        const elapsed = Math.floor((Date.now() - this.startTime) / 1000);
+        const minutes = Math.floor(elapsed / 60);
+        const seconds = elapsed % 60;
+        document.getElementById('time').textContent =
+            `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        setTimeout(() => this.updateTimer(), 1000);
+    }
+
+    showMessage(text, type = '') {
+        const messageEl = document.getElementById('message');
+        messageEl.textContent = text;
+        messageEl.className = 'message ' + type;
+    }
+
+    animate() {
+        this.flowAnimation += 0.1;
+        this.draw();
+        requestAnimationFrame(() => this.animate());
+    }
+}
+// === GAME INSTANTIATION AND FINAL RESIZE ===
+
+// Start the game
+const game = new PipePuzzleGame();
+window.game = game;
+
+// Initial resize after game constructed (ensure canvas size and grid fit)
+resizeGameCanvas();
     </script>
 </body>
 </html>
