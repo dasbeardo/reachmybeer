@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SYSTEM-1984 • Unbelievable Political Quotes</title>
+<meta name="description" content="A retro-CRT screensaver that types out real, hateful quotes from politicians to raise awareness.">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+
+<style>
+:root{--fg:#00ff00;--bg:#000;--scan:#001100}
+html,body{margin:0;height:100%;background:var(--bg);font-family:'VT323',monospace;color:var(--fg);overflow:hidden;cursor:none}
+body{display:flex;align-items:center;justify-content:center}
+main{width:100vw;height:100vh;display:flex;align-items:center;justify-content:center;perspective:1200px}
+#tube{width:88%;height:88%;padding:40px;display:flex;align-items:center;justify-content:center;
+      background:radial-gradient(circle at center,rgba(0,17,0,.9)0%,rgba(0,0,0,1)90%);
+      transform:rotateX(4deg) scale(1.03);box-shadow:0 0 40px #0f0 inset,0 0 20px #0f0;border-radius:12px;position:relative}
+#tube::after{content:"";position:absolute;inset:0;border-radius:12px;mix-blend-mode:screen;
+             box-shadow:0 0 15px 2px var(--fg),0 0 60px 6px var(--fg);opacity:.07;pointer-events:none}
+.scan,.interlace{position:absolute;inset:0;border-radius:12px;pointer-events:none}
+.scan{background:repeating-linear-gradient(180deg,transparent 0 1px,rgba(0,0,0,.25)1px 2px);
+      animation:scroll 8s linear infinite}
+@keyframes scroll{0%{transform:translateY(-100%)}100%{transform:translateY(100%)}}
+.interlace{background:linear-gradient(180deg,transparent 49%,rgba(0,0,0,.3)50%);opacity:.3}
+@media(prefers-reduced-motion:reduce){.scan{animation:none}body{cursor:default}}
+#content{max-width:90vw;text-align:center}
+.quote{font-size:24px;line-height:1.5;letter-spacing:2px;text-shadow:0 0 6px var(--fg),0 0 12px #0f0;white-space:pre-wrap}
+.attribution{font-size:18px;margin-top:10px;color:#99ff99}
+.source{font-size:14px;margin-top:4px;color:#66aa66}
+.cursor{display:inline-block;width:12px;height:24px;background:var(--fg);animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.hidden{position:absolute;left:-9999px;height:1px;width:1px;overflow:hidden}
+</style>
+</head>
+
+<body>
+<span id="sr" class="hidden">Political-quote screensaver. Quotes type automatically. Press Escape to exit.</span>
+
+<main tabindex="-1">
+  <div id="tube">
+    <div class="scan"></div><div class="interlace"></div>
+    <div id="content" role="log" aria-live="polite"></div>
+  </div>
+</main>
+
+<script>
+/* ---------- 1.  Quote data  ---------- */
+const QUOTES=[
+ {text:`“When Mexico sends its people … they’re bringing drugs. They’re bringing crime. They’re rapists. And some, I assume, are good people.”`,
+  speaker:"Donald J. Trump",year:2015,
+  src:"CBS News interview, June 16 2015" /*  [oai_citation:0‡CBS News](https://www.cbsnews.com/news/election-2016-donald-trump-defends-calling-mexican-immigrants-rapists/?utm_source=chatgpt.com) */},
+ {text:`“We can’t restore our civilization with somebody else’s babies.”`,
+  speaker:"Rep. Steve King",year:2017,
+  src:"Tweet / PBS report, Mar 12 2017" /*  [oai_citation:1‡PBS](https://www.pbs.org/newshour/politics/rep-steve-king-u-s-doesnt-need-somebody-elses-babies?utm_source=chatgpt.com) */},
+ {text:`“Space solar generators … beam the sun’s energy back to Earth … causing [California] wildfires.”`,
+  speaker:"Rep. Marjorie Taylor Greene",year:2018,
+  src:"Deleted Facebook post (via Snopes)", /*  [oai_citation:2‡Snopes](https://www.snopes.com/fact-check/greene-jewish-lasers-wildfires/?utm_source=chatgpt.com) */},
+ {text:`“Segregation now, segregation tomorrow, segregation forever!”`,
+  speaker:"Gov. George Wallace",year:1963,
+  src:"Alabama inaugural address, Jan 14 1963" /*  [oai_citation:3‡Emerson Kent](https://www.emersonkent.com/speeches/segregation_forever.htm?utm_source=chatgpt.com) */},
+ {text:`“Hitler massacred three million Jews … there’s three million drug addicts. I’d be happy to slaughter them.”`,
+  speaker:"Pres. Rodrigo Duterte",year:2016,
+  src:"Manila press conference, Sept 30 2016" /*  [oai_citation:4‡Inquirer.net](https://newsinfo.inquirer.net/820809/full-text-there-are-3m-drug-addicts-id-be-happy-to-slaughter-them?utm_source=chatgpt.com) */}
+];
+
+/* ---------- 2.  Typing engine  ---------- */
+const content=document.getElementById('content');
+let idx=0,alive=true,typing=false;
+function typeQuote(){if(!alive)return;
+  typing=true;const {text,speaker,year,src}=QUOTES[idx%QUOTES.length];
+  idx++;
+  content.innerHTML='';
+  const q=document.createElement('div');q.className='quote';content.append(q);
+  let i=0;
+  function step(){
+    if(i<text.length){q.textContent+=text[i++];requestAnimationFrame(step);}
+    else{finish();}
+  }
+  function finish(){
+    /* cursor blink */
+    const cur=document.createElement('span');cur.className='cursor';q.append(cur);
+    setTimeout(()=>cur.remove(),1500);
+    /* attribution + source */
+    const a=document.createElement('div');a.className='attribution';
+    a.textContent=`— ${speaker}, ${year}`;content.append(a);
+    const s=document.createElement('div');s.className='source';s.textContent=src;content.append(s);
+    typing=false;beep();
+    setTimeout(typeQuote,5000+Math.random()*3000);
+  }
+  step();
+}
+typeQuote();
+
+/* ---------- 3.  Minimal beep  ---------- */
+const ctx=new(window.AudioContext||window.webkitAudioContext)();
+function beep(){
+  if(matchMedia('(prefers-reduced-motion:reduce)').matches)return;
+  const o=ctx.createOscillator(),g=ctx.createGain();
+  o.type='square';o.frequency.value=900+Math.random()*300;
+  g.gain.value=0.05;o.connect(g).connect(ctx.destination);
+  o.start();o.stop(ctx.currentTime+0.2);
+}
+
+/* ---------- 4.  Exit on Esc  ---------- */
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){alive=false;content.innerHTML='';document.body.style.cursor='default';}});
+</script>
+</body>
+</html>

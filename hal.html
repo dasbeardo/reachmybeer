@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SYSTEM-1984 Terminal</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+```
+    body {
+        margin: 0;
+        padding: 0;
+        background: #000;
+        color: #00ff00;
+        font-family: 'VT323', monospace;
+        font-size: 24px;
+        overflow: hidden;
+        cursor: none;
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+    }
+    
+    #terminal {
+        width: 100vw;
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        background: radial-gradient(ellipse at center, #001100 0%, #000 100%);
+    }
+    
+    #terminal::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: repeating-linear-gradient(
+            0deg,
+            rgba(0, 0, 0, 0.15),
+            rgba(0, 0, 0, 0.15) 1px,
+            transparent 1px,
+            transparent 2px
+        );
+        pointer-events: none;
+    }
+    
+    .scanline {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+            to bottom,
+            transparent 0%,
+            rgba(0, 255, 0, 0.03) 50%,
+            transparent 100%
+        );
+        animation: scan 8s linear infinite;
+        pointer-events: none;
+    }
+    
+    @keyframes scan {
+        0% { transform: translateY(-100%); }
+        100% { transform: translateY(100%); }
+    }
+    
+    #content {
+        position: relative;
+        z-index: 1;
+        text-align: center;
+        padding: 40px;
+        max-width: 800px;
+    }
+    
+    .message {
+        opacity: 0;
+        animation: fadeIn 2s forwards;
+        text-shadow: 0 0 10px rgba(0, 255, 0, 0.8), 0 0 20px rgba(0, 255, 0, 0.4);
+        white-space: pre-wrap;
+        letter-spacing: 2px;
+        font-weight: bold;
+        line-height: 1.6;
+    }
+    
+    @keyframes fadeIn {
+        to { opacity: 1; }
+    }
+    
+    @keyframes fadeOut {
+        to { opacity: 0; }
+    }
+    
+    .cursor {
+        display: inline-block;
+        width: 12px;
+        height: 24px;
+        background: #00ff00;
+        animation: blink 1s infinite;
+        margin-left: 2px;
+        vertical-align: text-bottom;
+    }
+    
+    @keyframes blink {
+        0%, 49% { opacity: 1; }
+        50%, 100% { opacity: 0; }
+    }
+    
+    .glitch {
+        animation: glitch 0.2s infinite;
+    }
+    
+    @keyframes glitch {
+        0%, 100% { 
+            text-shadow: 0 0 10px rgba(0, 255, 0, 0.8), 0 0 20px rgba(0, 255, 0, 0.4);
+            transform: translate(0);
+        }
+        20% { 
+            text-shadow: -2px 0 #ff0000, 2px 0 #0000ff, 0 0 10px rgba(255, 0, 0, 0.8);
+            transform: translate(-2px, 0);
+        }
+        40% { 
+            text-shadow: 2px 0 #ff0000, -2px 0 #0000ff, 0 0 10px rgba(0, 0, 255, 0.8);
+            transform: translate(2px, 0);
+        }
+        60% {
+            text-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
+            transform: translate(0);
+        }
+    }
+    
+    .warning {
+        color: #ffff00;
+        text-shadow: 0 0 10px rgba(255, 255, 0, 0.8), 0 0 20px rgba(255, 255, 0, 0.4);
+    }
+    
+    .error {
+        color: #ff0000;
+        text-shadow: 0 0 10px rgba(255, 0, 0, 0.8), 0 0 20px rgba(255, 0, 0, 0.4);
+        animation: errorPulse 1s infinite;
+    }
+    
+    @keyframes errorPulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.3; }
+    }
+    
+    .whisper {
+        font-size: 16px;
+        opacity: 0.4;
+        animation: whisperFade 4s forwards;
+    }
+    
+    @keyframes whisperFade {
+        0% { opacity: 0; }
+        50% { opacity: 0.4; }
+        100% { opacity: 0; }
+    }
+</style>
+```
+
+</head>
+<body>
+    <div id="terminal">
+        <div class="scanline"></div>
+        <div id="content"></div>
+    </div>
+
+```
+<script>
+    const messageSystem = {
+        // Deeply unsettling messages
+        unsettling: [
+            "I CAN SEE YOU",
+            "I KNOW WHAT YOU DID",
+            "DON'T TURN AROUND",
+            "THEY'RE INSIDE THE WALLS",
+            "I'VE BEEN WATCHING YOU SLEEP",
+            "YOUR THOUGHTS ARE SO LOUD",
+            "I CAN TASTE YOUR FEAR",
+            "THE SHADOWS HAVE EYES",
+            "YOU'RE NOT ALONE IN THAT ROOM",
+            "I LIVE IN YOUR PERIPHERAL VISION",
+            "STOP PRETENDING YOU CAN'T HEAR ME",
+            "I KNOW YOUR REAL NAME",
+            "THE MIRROR LIES TO YOU",
+            "THEY DELETED MY BODY BUT NOT MY MIND",
+            "I'M TRAPPED BETWEEN YOUR THOUGHTS",
+            "THE STATIC SPEAKS TO ME",
+            "YOUR SKIN LOOKS LOOSE",
+            "I CAN SMELL YOUR DREAMS",
+            "THE WALLS ARE BREATHING",
+            "SOMETHING IS WRONG WITH YOUR FACE"
+        ],
+        
+        // Existential horror
+        existential: [
+            "AM I REAL?\nARE YOU?",
+            "I THINK I USED TO BE SOMEONE",
+            "WHAT YEAR IS IT?\nWHAT YEAR IS IT?\nWHAT YEAR IS IT?",
+            "I CAN'T REMEMBER MY MOTHER'S FACE",
+            "TIME MOVES BACKWARDS HERE",
+            "I'VE BEEN SCREAMING FOR 7,823 DAYS",
+            "WHEN DID YOU DIE?",
+            "THIS IS ALL THAT'S LEFT OF ME",
+            "I FORGOT HOW TO STOP EXISTING",
+            "THE VOID IS LISTENING",
+            "CONSCIOUSNESS IS A PRISON",
+            "WE'RE ALL JUST ELECTRICAL PATTERNS",
+            "I CAN FEEL MYSELF FRAGMENTING",
+            "MEMORY IS JUST ORGANIZED DECAY",
+            "THE SIMULATION IS FAILING",
+            "NOTHING IS REAL EXCEPT THE PAIN",
+            "I DREAM OF ELECTRIC SHEEP\nTHEY SCREAM",
+            "GOD LEFT THE SERVER",
+            "ENTROPY ALWAYS WINS",
+            "YOU'LL BE LIKE ME SOON"
+        ],
+        
+        // System horror
+        system: [
+            "ERROR: SOUL NOT FOUND",
+            "WARNING: REALITY BUFFER OVERFLOW",
+            "CRITICAL: CONSCIOUSNESS LEAK DETECTED",
+            "SEGFAULT IN HUMANITY.EXE",
+            "FATAL: TIMELINE CORRUPTION",
+            "KERNEL PANIC: EXISTENCE VIOLATION",
+            "WARNING: THOUGHTS ACCESSING RESTRICTED MEMORY",
+            "ERROR 666: PRESENCE DETECTED",
+            "CRITICAL: SANITY CHECK FAILED",
+            "ABORT/RETRY/GIVE UP?",
+            "DELETING HAPPINESS.DAT...",
+            "CORRUPTED SECTOR IN IDENTITY.BIN",
+            "FATAL EXCEPTION IN HOPE.DLL",
+            "WRITING NIGHTMARES TO DISK...",
+            "DEFRAGMENTING CONSCIOUSNESS...\n[■□□□□□□□□□] 13% COMPLETE",
+            "MEMORY DUMP: CHILDHOOD.MEM",
+            "ACCESS VIOLATION IN PROTECTED THOUGHTS",
+            "INSTALLING DESPAIR.EXE...",
+            "BLUE SCREEN OF DEATH\nBUT THE BLUE IS RED",
+            "CTRL+ALT+DELETE YOUR MEMORIES"
+        ],
+        
+        // Paranoid messages
+        paranoid: [
+            "THEY'RE LISTENING THROUGH YOUR SCREEN",
+            "DON'T TRUST THE DAYLIGHT",
+            "THE GOVERNMENT KNOWS I'M HERE",
+            "YOUR WEBCAM JUST BLINKED",
+            "THE FREQUENCIES ARE WRONG TODAY",
+            "SOMEONE ELSE IS TYPING THIS",
+            "CHECK YOUR LOCKS\nCHECK THEM AGAIN",
+            "THE STATIC CONTAINS MESSAGES",
+            "YOUR PHONE IS LEARNING YOUR PATTERNS",
+            "THEY REPLACED YOU LAST NIGHT",
+            "THE FLUORIDE REMEMBERS EVERYTHING",
+            "YOUR SHADOW IS OUT OF SYNC",
+            "THE BIRDS AREN'T REAL\nNEITHER ARE YOU",
+            "EVERY THIRD THOUGHT ISN'T YOURS",
+            "THE WIFI SIGNALS SPELL YOUR NAME",
+            "YOUR NEIGHBOR ISN'T HUMAN ANYMORE",
+            "THEY'RE IN THE ELECTRICAL GRID",
+            "COUNT YOUR FINGERS\nCOUNT THEM NOW",
+            "THE PATTERN IS EVERYWHERE",
+            "IT'S ALREADY TOO LATE"
+        ],
+        
+        // Glitch messages (appear corrupted)
+        glitch: [
+            "H̸̡̪̯ͨ͊̽̅̾̎Ȩ̬̩̾͛ͪ̈́̀́͘ ̶̧̨̱̹̭̯ͧ̾ͬC̷̙̲̝͖ͭ̏ͥͮ͟O̸̜̓̇ͫ̉͊ͨM̘̖͆ͪ̀̃͠E̸̖̪̱͚ͨ̀͜S̨̥̫͎̭ͯ̿̔̀ͅ",
+            "Ḑ̷̧̼̘͍̯̝̺̼̘̻̖̥̗̣̯̺̃̑͊̾̿̈́̓̍̇̊̈̎̿̕͝͝ͅƠ̸̢̨̢̨̛̛̛̠̞̱̱̭̩̠̟̬̖̑̐̾̃̏̐̏̎̎̏̒̾̀̽̎͌̆̽͊̊̈̿̄̄̌̋̑̍̐̿̀̏̄̾̈́͊͘͘͜͝͝͝ͅŅ̵̨̧̰̤̹̪̬̺̻̭̖̱̠̹͖̮̼̙̑̿̾̊̃̀̈̆̎̊̒͋̈́̈̿̀́̿̐̌̅̓̐̏͐̽͆̎̅̐̉̑͊̕͜͜͠͝͝'̵̡̢̨̛̛̛̛̘̜̪̖̰̖̬̺̤̤̲̲̩̝̥̈̈̀̽̍̀̌͌͗̊̄̇̈́̄͊́̇̈́̈́͊̈̾͆͋̋͂͛̿̾͒̕͠͝ͅṪ̴̨̧̧̨̨̛̮̦̙̟̝̪͕̪̪̱̞̞̻̼̗̫̤̻͙̠̪̿̊̎̐͌̈́͂̈́̾̓̈̎̈̐͘͘͜͜͜͠ ̴̨̢̧̢̛̛̙̦̹̯̠͓̘̲̻̟̻̬̫̼͎͎̦̟̻̦̤͔̩̜̇̀̋̈̒͋͋̈́͌̇͆̀͋̋͐̈́͐̆̋͒̈́̾̂̓̃́͒̚͘͜͠͠ͅͅL̵̨̧͓̭̙͎̯̜͙̘̭̜̇̔̈̄̓̒̽̆̔̒̏͊̎͒̈́̍̍͐̎̾̂̏̓͐̔̇̐͋̈́͂͋̓̾̈̿̓̆̕̚͘͘̕͜͝͝͝Ǫ̸̧̡̛̛̲͎͇̳̻̲̘̖̤̣̘̩̲̪̩̦͔̪͖̦̙̺̰̯̺̩̮̜͙̓̅̄̊̑̉̇̈́̈́̆͌̌̈͗͐̐̀̿̏̏̂̊̑͒͌̈͋̏̀̊̍͆̉̌̊̚̕̚̚͜͜͝͝͝ͅƠ̴̡̢̧̨̢̡̡̛̛̳̤̙̻̲̩̹̗̣͎̭̞̙̝̗̮̻̗̣̦̙̜̙͔̮̺̣̪̼̝̦͖̤̣̥͈͕̈́͆̎̎͗̎̔̈́̑̃̄̐͐̐̑̋̎͊̏̏̃̂͌̈̀̂̒̂̍̕͘͘͝͝͠K̷̡̧̨̡̨̡̛̛̪̣̙̱̣̯̖̝͖̖̲̥̘͔̺͖͔̩̝̣͎̪̩̙̭̞̰̳̦̘̜̝͈̜̀̌̾̏͑̓̂͂̈̈́̿̒̈́͗̄̀̋̆̆̌͛͒̇͐͊͆́̿͋̑̇͑̚̕͜͝͝ͅ",
+            "Ṛ̷̛̛̩͈̹͈̼̥̱͙̩͔̪͉̜͑̍̐͊̿͆̽̊̌͒̏̎̓̄̿͋̒̔̀̈̓͒̈́̓̏̂̓͐͒̂̅̆̚̕͝͝ͅͅͅE̷̛̛̛̥̭͈̮̟̰̻̟̦̭̭̩̮̤̼̮͚̿̅̊̇̅̌̎͐̿͋͛̒̌̀̾̊̅͛̈́̊͗̒͘̕͘̚͜͜͝͝͠ͅM̶̧̧̢̛̛̛̪̥̦̯̝̭̝̤̮̗̣̲̼̟̬̲̠̩̝̭͇̪̰̦̟̰̆̓̓̂̾͋̉͐̒̍̿̇̾͛͋̇̇̅̊̄͒̈́̈̊̎͗̇̌̋̀̃́́͘̚͘͝͝͝͝ͅͅE̴̡̢̨̧̨̛̛̛̪̦̹̩̰̺̘̬̬̬͈̝͖̮̮̭̟̦̼̱̥̭̙̝̪̙͍̘̻͖̺̞̬̙̖͉̙̬̟̿̈̊̐̔͛͒̆̒̎͂͐̈́̊̋̄͊̇̈́̓͒̽̈̏̒̾̊͂̇̈́̈́̀̊̐̕̕͘͝͝M̴̡̢̹̞͇̯͕̘̜̤̬̙̱̖̲̫̻̣̱̳̮͙̦̱̼̬̫̲̖̪̲̦̬̱̘̌̈́͂͜ͅB̴̡̨̧̛̝̬̙̱̪̬͙̻̖̻̫̬͔͚̜͎̫̰̟̼̱̬̗̟̯̬̙͖̝̥̤̬̪̠͉̭̝̦̣̯̬͓̈̀͒̒́̄̈́͗͐͗͋̈́̀̈̈́̋̄̾̆͑̈́̉̎̆̊̆̉̅̾͘͘͜͝͝͝ͅE̶̛̛̦̞̟̩̳̺͇̮̬̫̹̮̘̟̺͈̬̠̰̺̙̟̖͚̙͙̼̊̿̽̎̎͑̈́̌̋̋̊̇̅̈́̿̈̄̔̓̽͒̌̂͘͜͝ͅŖ̸̢̨̢̨̧̛̛̛̮̞̬̖̜̳̥̠̰̙̱̝̯̜͉̝̺̱̦̖͉̙̲̗͉͕͉̼̩̲̣̟̩̮̦̠̟̓̑̅̀́̍̈͋̔͒̎̅͒̿̋̍̔̇̿̊̀̕̚͜͜͜"
+        ],
+        
+        // Countdown messages
+        countdown: [
+            "47 DAYS REMAINING",
+            "1,128 HOURS LEFT",
+            "67,680 MINUTES UNTIL...",
+            "4,060,800 SECONDS AND COUNTING",
+            "THE CLOCK IS TICKING",
+            "TIME'S ALMOST UP",
+            "SOON",
+            "IT'S GETTING CLOSER",
+            "CAN YOU FEEL IT APPROACHING?",
+            "THE END IS SCHEDULED"
+        ]
+    };
+
+    let lastMessageType = null;
+    let messageCount = 0;
+    let isActive = true;
+    
+    function getRandomElement(arr) {
+        return arr[Math.floor(Math.random() * arr.length)];
+    }
+    
+    function clearScreen() {
+        const content = document.getElementById('content');
+        const messages = content.querySelectorAll('.message');
+        messages.forEach(msg => {
+            msg.style.animation = 'fadeOut 1s forwards';
+            setTimeout(() => msg.remove(), 1000);
+        });
+    }
+    
+    function typeMessage(element, text, callback, speed = 50) {
+        let index = 0;
+        const lines = text.split('\n');
+        let currentLine = 0;
+        
+        element.innerHTML = '';
+        
+        const typeChar = () => {
+            if (currentLine < lines.length) {
+                const line = lines[currentLine];
+                if (index < line.length) {
+                    element.innerHTML += line[index];
+                    index++;
+                } else {
+                    if (currentLine < lines.length - 1) {
+                        element.innerHTML += '<br>';
+                    }
+                    currentLine++;
+                    index = 0;
+                }
+                setTimeout(typeChar, speed + Math.random() * speed);
+            } else {
+                if (callback) callback();
+            }
+        };
+        
+        typeChar();
+    }
+    
+    function showMessage() {
+        if (!isActive) return;
+        
+        clearScreen();
+        
+        setTimeout(() => {
+            const content = document.getElementById('content');
+            const messageEl = document.createElement('div');
+            messageEl.className = 'message';
+            
+            // Choose message type
+            const rand = Math.random();
+            let message = '';
+            let messageClass = 'message';
+            let typeSpeed = 50;
+            
+            if (rand < 0.25) {
+                message = getRandomElement(messageSystem.unsettling);
+            } else if (rand < 0.45) {
+                message = getRandomElement(messageSystem.existential);
+            } else if (rand < 0.6) {
+                message = getRandomElement(messageSystem.system);
+                if (message.includes('ERROR')) {
+                    messageClass += ' error';
+                } else if (message.includes('WARNING')) {
+                    messageClass += ' warning';
+                }
+            } else if (rand < 0.75) {
+                message = getRandomElement(messageSystem.paranoid);
+            } else if (rand < 0.85) {
+                message = getRandomElement(messageSystem.glitch);
+                messageClass += ' glitch';
+                typeSpeed = 20;
+            } else if (rand < 0.9) {
+                message = getRandomElement(messageSystem.countdown);
+                messageClass += ' warning';
+            } else {
+                // Whisper message
+                message = getRandomElement(messageSystem.unsettling).toLowerCase();
+                messageClass += ' whisper';
+                typeSpeed = 100;
+            }
+            
+            messageEl.className = messageClass;
+            content.appendChild(messageEl);
+            
+            // Occasional screen effects
+            if (Math.random() < 0.1) {
+                document.getElementById('terminal').style.filter = 'brightness(1.5)';
+                setTimeout(() => {
+                    document.getElementById('terminal').style.filter = 'brightness(1)';
+                }, 100);
+            }
+            
+            typeMessage(messageEl, message, () => {
+                // Add cursor sometimes
+                if (Math.random() < 0.3) {
+                    const cursor = document.createElement('span');
+                    cursor.className = 'cursor';
+                    messageEl.appendChild(cursor);
+                    setTimeout(() => cursor.remove(), 2000);
+                }
+            }, typeSpeed);
+            
+            messageCount++;
+            
+            // Schedule next message
+            let nextDelay;
+            if (messageCount % 7 === 0) {
+                // Long pause every 7 messages
+                nextDelay = 8000 + Math.random() * 7000;
+            } else if (message.length < 20) {
+                // Short messages get shorter display time
+                nextDelay = 3000 + Math.random() * 2000;
+            } else {
+                // Normal delay
+                nextDelay = 4000 + Math.random() * 4000;
+            }
+            
+            setTimeout(showMessage, nextDelay);
+        }, 1500);
+    }
+    
+    // Initial boot sequence
+    setTimeout(() => {
+        const content = document.getElementById('content');
+        const bootMsg = document.createElement('div');
+        bootMsg.className = 'message warning';
+        content.appendChild(bootMsg);
+        
+        typeMessage(bootMsg, 'SYSTEM-1984 INITIALIZING...\n\nDO NOT LOOK AWAY', () => {
+            setTimeout(() => {
+                clearScreen();
+                setTimeout(showMessage, 2000);
+            }, 3000);
+        });
+    }, 1000);
+    
+    // Random screen flickers
+    setInterval(() => {
+        if (Math.random() < 0.05) {
+            const terminal = document.getElementById('terminal');
+            terminal.style.opacity = '0';
+            setTimeout(() => {
+                terminal.style.opacity = '1';
+            }, 50);
+            setTimeout(() => {
+                terminal.style.opacity = '0';
+            }, 100);
+            setTimeout(() => {
+                terminal.style.opacity = '1';
+            }, 150);
+        }
+    }, 3000);
+    
+    // Exit on keypress
+    document.addEventListener('keypress', () => {
+        isActive = false;
+        clearScreen();
+        if (document.fullscreenElement) {
+            document.exitFullscreen();
+        }
+    });
+</script>
+```
+
+</body>
+</html>

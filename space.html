@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infinite Space Explorer</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #000;
+            font-family: 'Courier New', monospace;
+            cursor: none;
+        }
+
+```
+    canvas {
+        display: block;
+    }
+    
+    .hud {
+        position: absolute;
+        color: #0ff;
+        font-size: 14px;
+        padding: 20px;
+        text-shadow: 0 0 10px #0ff;
+        pointer-events: none;
+        opacity: 0.9;
+    }
+    
+    .top-left {
+        top: 0;
+        left: 0;
+    }
+    
+    .bottom-right {
+        bottom: 0;
+        right: 0;
+        text-align: right;
+    }
+    
+    .message {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: #fff;
+        font-size: 28px;
+        text-align: center;
+        text-shadow: 0 0 30px currentColor, 0 0 60px currentColor;
+        opacity: 0;
+        transition: opacity 1s;
+        pointer-events: none;
+        letter-spacing: 3px;
+        font-weight: bold;
+    }
+    
+    .message.show {
+        opacity: 1;
+    }
+</style>
+```
+
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div class="hud top-left">
+        <div id="speed">VELOCITY: <span>0</span> C</div>
+        <div id="location">SECTOR: <span>DEEP SPACE</span></div>
+    </div>
+    <div class="hud bottom-right">
+        <div id="encounters">FIRST CONTACTS: <span>0</span></div>
+        <div id="planets">WORLDS EXPLORED: <span>0</span></div>
+    </div>
+    <div class="message" id="message"></div>
+
+```
+<script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const messageEl = document.getElementById('message');
+    
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    
+    // Game state
+    const state = {
+        phase: 'traveling',
+        speed: 30,
+        targetSpeed: 30,
+        stars: [],
+        planets: [],
+        aliens: [],
+        particles: [],
+        nebulae: [],
+        asteroids: [],
+        spaceStations: [],
+        camera: { shake: 0 },
+        currentPlanet: null,
+        encounterCount: 0,
+        planetsVisited: 0,
+        time: 0,
+        colorShift: 0
+    };
+    
+    // Enhanced Star class
+    class Star {
+        constructor() {
+            this.reset();
+            this.z = Math.random() * 2000;
+            this.twinkle = Math.random() * Math.PI * 2;
+            this.color = this.generateStarColor();
+        }
+        
+        reset() {
+            this.x = (Math.random() - 0.5) * 4000;
+            this.y = (Math.random() - 0.5) * 4000;
+            this.z = 2000;
+            this.size = Math.random() * 2.5;
+            this.brightness = 0.5 + Math.random() * 0.5;
+        }
+        
+        generateStarColor() {
+            const colors = [
+                { r: 255, g: 255, b: 255 },   // White
+                { r: 255, g: 230, b: 200 },   // Yellow
+                { r: 200, g: 230, b: 255 },   // Blue
+                { r: 255, g: 200, b: 200 }    // Red
+            ];
+            return colors[Math.floor(Math.random() * colors.length)];
+        }
+        
+        update() {
+            this.z -= state.speed;
+            this.twinkle += 0.05;
+            
+            if (this.z <= 0) {
+                this.reset();
+            }
+        }
+        
+        draw() {
+            const x = (this.x / this.z) * 1000 + canvas.width / 2;
+            const y = (this.y / this.z) * 1000 + canvas.height / 2;
+            const size = (1 - this.z / 2000) * this.size * 3;
+            const twinkleEffect = Math.sin(this.twinkle) * 0.3 + 0.7;
+            const opacity = (1 - this.z / 2000) * this.brightness * twinkleEffect;
+            
+            // Star core
+            ctx.fillStyle = `rgba(${this.color.r}, ${this.color.g}, ${this.color.b}, ${opacity})`;
+            ctx.beginPath();
+            ctx.arc(x, y, size, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Star glow
+            if (size > 1) {
+                const gradient = ctx.createRadialGradient(x, y, 0, x, y, size * 4);
+                gradient.addColorStop(0, `rgba(${this.color.r}, ${this.color.g}, ${this.color.b}, ${opacity * 0.5})`);
+                gradient.addColorStop(1, `rgba(${this.color.r}, ${this.color.g}, ${this.color.b}, 0)`);
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(x, y, size * 4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Motion blur when at high speed
+            if (state.speed > 50) {
+                ctx.strokeStyle = `rgba(${this.color.r}, ${this.color.g}, ${this.color.b}, ${opacity * 0.3})`;
+                ctx.lineWidth = size;
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                const prevX = (this.x / (this.z + state.speed * 0.5)) * 1000 + canvas.width / 2;
+                const prevY = (this.y / (this.z + state.speed * 0.5)) * 1000 + canvas.height / 2;
+                ctx.lineTo(prevX, prevY);
+                ctx.stroke();
+            }
+        }
+    }
+    
+    // Enhanced Planet class
+    class Planet {
+        constructor() {
+            this.x = (Math.random() - 0.5) * 3000;
+            this.y = (Math.random() - 0.5) * 3000;
+            this.z = 2000;
+            this.radius = 150 + Math.random() * 250;
+            this.color = this.generateColor();
+            this.rotation = 0;
+            this.rotationSpeed = Math.random() * 0.02 - 0.01;
+            this.hasRings = Math.random() < 0.4;
+            this.atmosphere = Math.random() < 0.7;
+            this.moons = [];
+            this.terrainType = ['rocky', 'oceanic', 'desert', 'ice', 'volcanic', 'crystalline'][Math.floor(Math.random() * 6)];
+            this.clouds = [];
+            
+            // Generate moons
+            if (Math.random() < 0.5) {
+                const numMoons = 1 + Math.floor(Math.random() * 3);
+                for (let i = 0; i < numMoons; i++) {
+                    this.moons.push({
+                        angle: Math.random() * Math.PI * 2,
+                        distance: this.radius * (1.5 + Math.random()),
+                        size: this.radius * 0.1 * (0.5 + Math.random() * 0.5),
+                        speed: 0.01 + Math.random() * 0.02
+                    });
+                }
+            }
+            
+            // Generate cloud layers
+            for (let i = 0; i < 3; i++) {
+                this.clouds.push({
+                    rotation: Math.random() * Math.PI * 2,
+                    speed: Math.random() * 0.005 + 0.002,
+                    opacity: Math.random() * 0.3 + 0.1
+                });
+            }
+        }
+        
+        generateColor() {
+            const palettes = {
+                rocky: [
+                    { r: 180, g: 140, b: 100 },
+                    { r: 160, g: 120, b: 80 }
+                ],
+                oceanic: [
+                    { r: 50, g: 100, b: 200 },
+                    { r: 30, g: 150, b: 180 }
+                ],
+                desert: [
+                    { r: 220, g: 180, b: 100 },
+                    { r: 200, g: 160, b: 80 }
+                ],
+                ice: [
+                    { r: 200, g: 220, b: 255 },
+                    { r: 180, g: 200, b: 230 }
+                ],
+                volcanic: [
+                    { r: 200, g: 50, b: 30 },
+                    { r: 255, g: 100, b: 0 }
+                ],
+                crystalline: [
+                    { r: 150, g: 100, b: 200 },
+                    { r: 200, g: 150, b: 255 }
+                ]
+            };
+            const palette = palettes[this.terrainType];
+            return palette[Math.floor(Math.random() * palette.length)];
+        }
+        
+        update() {
+            if (state.phase === 'traveling' || state.phase === 'approaching') {
+                this.z -= state.speed;
+            }
+            this.rotation += this.rotationSpeed;
+            
+            // Update moons
+            this.moons.forEach(moon => {
+                moon.angle += moon.speed;
+            });
+            
+            // Update clouds
+            this.clouds.forEach(cloud => {
+                cloud.rotation += cloud.speed;
+            });
+        }
+        
+        draw() {
+            if (this.z <= 0) return;
+            
+            const screenX = (this.x / this.z) * 1000 + canvas.width / 2;
+            const screenY = (this.y / this.z) * 1000 + canvas.height / 2;
+            const screenRadius = Math.max(0, (this.radius / this.z) * 1000);
+            
+            // Atmosphere glow
+            if (this.atmosphere && screenRadius > 5) {
+                const atmGradient = ctx.createRadialGradient(
+                    screenX, screenY, screenRadius * 0.8,
+                    screenX, screenY, screenRadius * 2
+                );
+                atmGradient.addColorStop(0, `rgba(${this.color.r * 0.5}, ${this.color.g * 0.5}, ${this.color.b * 0.5}, 0)`);
+                atmGradient.addColorStop(0.5, `rgba(${this.color.r * 0.7}, ${this.color.g * 0.7}, ${this.color.b * 0.7}, 0.2)`);
+                atmGradient.addColorStop(1, `rgba(${this.color.r}, ${this.color.g}, ${this.color.b}, 0)`);
+                ctx.fillStyle = atmGradient;
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, screenRadius * 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Planet shadow
+            ctx.save();
+            ctx.globalAlpha = 0.3;
+            ctx.fillStyle = '#000';
+            ctx.beginPath();
+            ctx.arc(screenX + screenRadius * 0.1, screenY + screenRadius * 0.1, screenRadius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+            
+            // Planet body
+            const gradient = ctx.createRadialGradient(
+                screenX - screenRadius * 0.4, 
+                screenY - screenRadius * 0.4, 
+                0,
+                screenX, 
+                screenY, 
+                screenRadius * 1.2
+            );
+            gradient.addColorStop(0, `rgb(${Math.min(255, this.color.r * 1.3)}, ${Math.min(255, this.color.g * 1.3)}, ${Math.min(255, this.color.b * 1.3)})`);
+            gradient.addColorStop(0.5, `rgb(${this.color.r}, ${this.color.g}, ${this.color.b})`);
+            gradient.addColorStop(1, `rgb(${this.color.r * 0.2}, ${this.color.g * 0.2}, ${this.color.b * 0.2})`);
+            
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(screenX, screenY, screenRadius, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Surface details
+            if (screenRadius > 20) {
+                ctx.save();
+                ctx.globalAlpha = 0.4;
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, screenRadius, 0, Math.PI * 2);
+                ctx.clip();
+                
+                for (let i = 0; i < 8; i++) {
+                    const angle = this.rotation + i * 0.8;
+                    const detailX = screenX + Math.cos(angle) * screenRadius * 0.6;
+                    const detailY = screenY + Math.sin(angle) * screenRadius * 0.4;
+                    const detailSize = screenRadius * (0.2 + Math.sin(i) * 0.1);
+                    
+                    ctx.fillStyle = `rgba(${this.color.r * 0.5}, ${this.color.g * 0.5}, ${this.color.b * 0.5}, 0.5)`;
+                    ctx.beginPath();
+                    ctx.arc(detailX, detailY, detailSize, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                // Cloud layers
+                this.clouds.forEach(cloud => {
+                    ctx.fillStyle = `rgba(255, 255, 255, ${cloud.opacity})`;
+                    for (let i = 0; i < 5; i++) {
+                        const angle = cloud.rotation + i * 1.2;
+                        const cloudX = screenX + Math.cos(angle) * screenRadius * 0.7;
+                        const cloudY = screenY + Math.sin(angle) * screenRadius * 0.3;
+                        ctx.beginPath();
+                        ctx.arc(cloudX, cloudY, screenRadius * 0.15, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                });
+                
+                ctx.restore();
+            }
+            
+            // Rings
+            if (this.hasRings && screenRadius > 10) {
+                ctx.save();
+                ctx.globalAlpha = 0.6;
+                const ringGradient = ctx.createLinearGradient(
+                    screenX - screenRadius * 2, screenY,
+                    screenX + screenRadius * 2, screenY
+                );
+                ringGradient.addColorStop(0, `rgba(${this.color.r}, ${this.color.g}, ${this.color.b}, 0)`);
+                ringGradient.addColorStop(0.4, `rgba(${this.color.r}, ${this.color.g}, ${this.color.b}, 0.8)`);
+                ringGradient.addColorStop(0.6, `rgba(${this.color.r}, ${this.color.g}, ${this.color.b}, 0.8)`);
+                ringGradient.addColorStop(1, `rgba(${this.color.r}, ${this.color.g}, ${this.color.b}, 0)`);
+                
+                ctx.strokeStyle = ringGradient;
+                ctx.lineWidth = screenRadius * 0.15;
+                ctx.beginPath();
+                ctx.ellipse(screenX, screenY, screenRadius * 1.8, screenRadius * 0.6, Math.sin(this.rotation * 0.5) * 0.3, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.restore();
+            }
+            
+            // Moons
+            this.moons.forEach(moon => {
+                const moonX = screenX + Math.cos(moon.angle) * (screenRadius + moon.distance / this.z * 1000);
+                const moonY = screenY + Math.sin(moon.angle) * (screenRadius + moon.distance / this.z * 1000) * 0.3;
+                const moonRadius = moon.size / this.z * 1000;
+                
+                if (moonRadius > 1) {
+                    ctx.fillStyle = `rgba(200, 200, 200, 0.8)`;
+                    ctx.beginPath();
+                    ctx.arc(moonX, moonY, moonRadius, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
+        }
+    }
+    
+    // Nebula class
+    class Nebula {
+        constructor() {
+            this.x = (Math.random() - 0.5) * 6000;
+            this.y = (Math.random() - 0.5) * 6000;
+            this.z = 1000 + Math.random() * 1000;
+            this.size = 500 + Math.random() * 1000;
+            this.color = this.generateNebulaColor();
+            this.rotation = Math.random() * Math.PI * 2;
+            this.rotationSpeed = (Math.random() - 0.5) * 0.001;
+        }
+        
+        generateNebulaColor() {
+            const colors = [
+                { r: 255, g: 100, b: 150 }, // Pink
+                { r: 100, g: 150, b: 255 }, // Blue
+                { r: 150, g: 255, b: 150 }, // Green
+                { r: 255, g: 200, b: 100 }  // Orange
+            ];
+            return colors[Math.floor(Math.random() * colors.length)];
+        }
+        
+        update() {
+            this.z -= state.speed * 0.3;
+            this.rotation += this.rotationSpeed;
+            if (this.z <= -500) {
+                this.z = 2000;
+                this.x = (Math.random() - 0.5) * 6000;
+                this.y = (Math.random() - 0.5) * 6000;
+            }
+        }
+        
+        draw() {
+            if (this.z <= 0) return;
+            
+            const screenX = (this.x / this.z) * 1000 + canvas.width / 2;
+            const screenY = (this.y / this.z) * 1000 + canvas.height / 2;
+            const screenSize = (this.size / this.z) * 1000;
+            
+            if (screenSize > 0) {
+                ctx.save();
+                ctx.translate(screenX, screenY);
+                ctx.rotate(this.rotation);
+                
+                const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, screenSize);
+                gradient.addColorStop(0, `rgba(${this.color.r}, ${this.color.g}, ${this.color.b}, 0.1)`);
+                gradient.addColorStop(0.5, `rgba(${this.color.r * 0.7}, ${this.color.g * 0.7}, ${this.color.b * 0.7}, 0.05)`);
+                gradient.addColorStop(1, `rgba(${this.color.r * 0.5}, ${this.color.g * 0.5}, ${this.color.b * 0.5}, 0)`);
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.ellipse(0, 0, screenSize, screenSize * 0.6, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.restore();
+            }
+        }
+    }
+    
+    // Space Station class
+    class SpaceStation {
+        constructor() {
+            this.x = (Math.random() - 0.5) * 4000;
+            this.y = (Math.random() - 0.5) * 4000;
+            this.z = 2000;
+            this.size = 50 + Math.random() * 100;
+            this.rotation = 0;
+            this.lights = [];
+            for (let i = 0; i < 10; i++) {
+                this.lights.push({
+                    angle: Math.random() * Math.PI * 2,
+                    distance: Math.random() * this.size,
+                    blink: Math.random() * Math.PI * 2
+                });
+            }
+        }
+        
+        update() {
+            this.z -= state.speed;
+            this.rotation += 0.01;
+            this.lights.forEach(light => {
+                light.blink += 0.1;
+            });
+            
+            if (this.z <= 0) {
+                this.z = 2000;
+                this.x = (Math.random() - 0.5) * 4000;
+                this.y = (Math.random() - 0.5) * 4000;
+            }
+        }
+        
+        draw() {
+            if (this.z <= 0) return;
+            
+            const screenX = (this.x / this.z) * 1000 + canvas.width / 2;
+            const screenY = (this.y / this.z) * 1000 + canvas.height / 2;
+            const screenSize = (this.size / this.z) * 1000;
+            
+            if (screenSize > 2) {
+                ctx.save();
+                ctx.translate(screenX, screenY);
+                ctx.rotate(this.rotation);
+                
+                // Station structure
+                ctx.strokeStyle = '#666';
+                ctx.lineWidth = 2;
+                
+                // Ring
+                ctx.beginPath();
+                ctx.arc(0, 0, screenSize, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // Spokes
+                for (let i = 0; i < 6; i++) {
+                    const angle = (i / 6) * Math.PI * 2;
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0);
+                    ctx.lineTo(Math.cos(angle) * screenSize, Math.sin(angle) * screenSize);
+                    ctx.stroke();
+                }
+                
+                // Central hub
+                ctx.fillStyle = '#444';
+                ctx.beginPath();
+                ctx.arc(0, 0, screenSize * 0.2, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Lights
+                this.lights.forEach(light => {
+                    const brightness = Math.sin(light.blink) * 0.5 + 0.5;
+                    ctx.fillStyle = `rgba(255, 255, 100, ${brightness})`;
+                    const lx = Math.cos(light.angle) * light.distance;
+                    const ly = Math.sin(light.angle) * light.distance;
+                    ctx.beginPath();
+                    ctx.arc(lx, ly, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+                
+                ctx.restore();
+            }
+        }
+    }
+    
+    // Enhanced Alien class
+    class Alien {
+        constructor(x, y) {
+            this.x = x || (Math.random() - 0.5) * 2000;
+            this.y = y || (Math.random() - 0.5) * 2000;
+            this.z = 100 + Math.random() * 500;
+            this.type = Math.floor(Math.random() * 6);
+            this.size = 40 + Math.random() * 80;
+            this.angle = Math.random() * Math.PI * 2;
+            this.speed = 0.5 + Math.random() * 2;
+            this.color = this.generateAlienColor();
+            this.tentacles = 3 + Math.floor(Math.random() * 5);
+            this.phase = Math.random() * Math.PI * 2;
+            this.energy = [];
+            
+            // Generate energy particles
+            for (let i = 0; i < 20; i++) {
+                this.energy.push({
+                    angle: Math.random() * Math.PI * 2,
+                    distance: Math.random() * this.size * 2,
+                    speed: Math.random() * 0.05 + 0.01
+                });
+            }
+        }
+        
+        generateAlienColor() {
+            const colors = [
+                { r: 100, g: 255, b: 200 }, // Cyan
+                { r: 255, g: 100, b: 255 }, // Magenta
+                { r: 150, g: 200, b: 255 }, // Light blue
+                { r: 255, g: 200, b: 100 }, // Gold
+                { r: 200, g: 255, b: 100 }, // Lime
+                { r: 255, g: 150, b: 200 }  // Pink
+            ];
+            return colors[Math.floor(Math.random() * colors.length)];
+        }
+        
+        update() {
+            this.phase += 0.03;
+            
+            // 3D movement
+            this.x += Math.cos(this.angle) * this.speed;
+            this.y += Math.sin(this.angle) * this.speed;
+            this.z += Math.sin(this.phase) * 2;
+            
+            // Random direction change
+            if (Math.random() < 0.02) {
+                this.angle += (Math.random() - 0.5) * 0.5;
+            }
+            
+            // Update energy particles
+            this.energy.forEach(e => {
+                e.angle += e.speed;
+                e.distance = this.size + Math.sin(this.phase + e.angle) * this.size;
+            });
+        }
+        
+        draw() {
+            if (this.z <= 0) return;
+            
+            const screenX = (this.x / this.z) * 1000 + canvas.width / 2;
+            const screenY = (this.y / this.z) * 1000 + canvas.height / 2;
+            const screenSize = (this.size / this.z) * 1000;
+            
+            if (screenSize < 1) return;
+            
+            ctx.save();
+            ctx.translate(screenX, screenY);
+            
+            // Alien glow aura
+            const auraGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, screenSize * 3);
+            auraGradient.addColorStop(0, `rgba(${this.color.r}, ${this.color.g}, ${this.color.b}, 0.3)`);
+            auraGradient.addColorStop(0.5, `rgba(${this.color.r}, ${this.color.g}, ${this.color.b}, 0.1)`);
+            auraGradient.addColorStop(1, `rgba(${this.color.r}, ${this.color.g}, ${this.color.b}, 0)`);
+            ctx.fillStyle = auraGradient;
+            ctx.beginPath();
+            ctx.arc(0, 0, screenSize * 3, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Energy particles
+            this.energy.forEach(e => {
+                const ex = Math.cos(e.angle) * e.distance / this.z * 1000;
+                const ey = Math.sin(e.angle) * e.distance / this.z * 1000;
+                ctx.fillStyle = `rgba(${this.color.r}, ${this.color.g}, ${this.color.b}, 0.8)`;
+                ctx.beginPath();
+                ctx.arc(ex, ey, 2, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            
+            // Draw alien based on type
+            ctx.fillStyle = `rgba(${this.color.r}, ${this.color.g}, ${this.color.b}, 0.9)`;
+            ctx.strokeStyle = `rgba(${this.color.r}, ${this.color.g}, ${this.color.b}, 0.7)`;
+            ctx.lineWidth = 2;
+            
+            switch(this.type) {
+                case 0: // Jellyfish
+                    ctx.beginPath();
+                    ctx.arc(0, -screenSize * 0.2, screenSize, Math.PI, 0);
+                    ctx.fill();
+                    
+                    for (let i = 0; i < this.tentacles; i++) {
+                        const angle = (i / this.tentacles - 0.5) * Math.PI;
+                        const wave = Math.sin(this.phase + i) * screenSize * 0.2;
+                        ctx.beginPath();
+                        ctx.moveTo(Math.cos(angle) * screenSize, 0);
+                        ctx.quadraticCurveTo(
+                            Math.cos(angle) * screenSize * 0.5 + wave,
+                            screenSize,
+                            Math.cos(angle) * screenSize * 0.3,
+                            screenSize * 2
+                        );
+                        ctx.stroke();
+                    }
+                    break;
+                    
+                case 1: // Crystal being
+                    ctx.save();
+                    ctx.rotate(this.phase * 0.5);
+                    for (let i = 0; i < 8; i++) {
+                        ctx.rotate(Math.PI / 4);
+                        ctx.beginPath();
+                        ctx.moveTo(0, 0);
+                        ctx.lineTo(screenSize, 0);
+                        ctx.lineTo(screenSize * 0.7, screenSize * 0.3);
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.stroke();
+                    }
+                    ctx.restore();
+                    break;
+                    
+                case 2: // Sphere cluster
+                    const sphereCount = 7;
+                    for (let i = 0; i < sphereCount; i++) {
+                        const angle = (i / sphereCount) * Math.PI * 2 + this.phase;
+                        const dist = screenSize * 0.5 * (1 + Math.sin(this.phase + i) * 0.2);
+                        const x = Math.cos(angle) * dist;
+                        const y = Math.sin(angle) * dist;
+                        const sizeVar = screenSize * 0.4 * (1 + Math.sin(this.phase + i * 2) * 0.2);
+                        
+                        const sphereGrad = ctx.createRadialGradient(x - sizeVar * 0.3, y - sizeVar * 0.3, 0, x, y, sizeVar);
+                        sphereGrad.addColorStop(0, `rgba(${this.color.r}, ${this.color.g}, ${this.color.b}, 1)`);
+                        sphereGrad.addColorStop(1, `rgba(${this.color.r * 0.5}, ${this.color.g * 0.5}, ${this.color.b * 0.5}, 0.5)`);
+                        ctx.fillStyle = sphereGrad;
+                        ctx.beginPath();
+                        ctx.arc(x, y, sizeVar, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    break;
+                    
+                case 3: // Energy being
+                    for (let i = 0; i < 30; i++) {
+                        const angle = (i / 30) * Math.PI * 2;
+                        const radius = screenSize * (1 + Math.sin(this.phase + i * 0.3) * 0.5);
+                        ctx.beginPath();
+                        ctx.arc(0, 0, radius, angle, angle + 0.15);
+                        ctx.stroke();
+                    }
+                    break;
+                    
+                case 4: // Geometric entity
+                    ctx.save();
+                    ctx.rotate(this.phase);
+                    for (let layer = 0; layer < 3; layer++) {
+                        ctx.rotate(Math.PI / 6);
+                        ctx.globalAlpha = 1 - layer * 0.3;
+                        ctx.beginPath();
+                        for (let i = 0; i < 6; i++) {
+                            const angle = (i / 6) * Math.PI * 2;
+                            const x = Math.cos(angle) * screenSize * (1 - layer * 0.2);
+                            const y = Math.sin(angle) * screenSize * (1 - layer * 0.2);
+                            if (i === 0) ctx.moveTo(x, y);
+                            else ctx.lineTo(x, y);
+                        }
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.stroke();
+                    }
+                    ctx.restore();
+                    break;
+                    
+                case 5: // Organic flow
+                    ctx.beginPath();
+                    for (let i = 0; i <= 20; i++) {
+                        const angle = (i / 20) * Math.PI * 2;
+                        const radius = screenSize * (1 + Math.sin(angle * 3 + this.phase) * 0.3);
+                        const x = Math.cos(angle) * radius;
+                        const y = Math.sin(angle) * radius;
+                        if (i === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                    }
+                    ctx.closePath();
+                    ctx.fill();
+                    break;
+            }
+            
+            ctx.restore();
+        }
+    }
+    
+    // Particle class
+    class Particle {
+        constructor(x, y, type = 'star') {
+            this.x = x;
+            this.y = y;
+            this.z = 1;
+            this.vx = (Math.random() - 0.5) * 10;
+            this.vy = (Math.random() - 0.5) * 10;
+            this.vz = (Math.random() - 0.5) * 5;
+            this.life = 1;
+            this.decay = 0.01;
+            this.type = type;
+            this.size = Math.random() * 4 + 2;
+            
+            // Set color based on type
+            if (type === 'warp') {
+                this.color = { r: 100, g: 200, b: 255 };
+            } else if (type === 'alien') {
+                this.color = { r: 0, g: 255, b: 200 };
+            } else {
+                this.color = { r: 255, g: 255, b: 200 };
+            }
+        }
+        
+        update() {
+            this.x += this.vx;
+            this.y += this.vy;
+            this.z += this.vz;
+            this.life -= this.decay;
+            this.vx *= 0.98;
+            this.vy *= 0.98;
+        }
+        
+        draw() {
+            if (this.life <= 0 || this.z <= 0) return;
+            
+            const screenX = (this.x / this.z) * 1000 + canvas.width / 2;
+            const screenY = (this.y / this.z) * 1000 + canvas.height / 2;
+            const screenSize = (this.size / this.z) * 1000;
+            
+            ctx.save();
+            ctx.globalAlpha = this.life;
+            
+            const gradient = ctx.createRadialGradient(screenX, screenY, 0, screenX, screenY, screenSize * 2);
+            gradient.addColorStop(0, `rgba(${this.color.r}, ${this.color.g}, ${this.color.b}, 1)`);
+            gradient.addColorStop(1, `rgba(${this.color.r}, ${this.color.g}, ${this.color.b}, 0)`);
+            ctx.fillStyle = gradient;
+            
+            ctx.beginPath();
+            ctx.arc(screenX, screenY, screenSize * 2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.restore();
+        }
+    }
+    
+    // Initialize
+    function init() {
+        // Create stars
+        for (let i = 0; i < 800; i++) {
+            state.stars.push(new Star());
+        }
+        
+        // Create initial nebulae
+        for (let i = 0; i < 3; i++) {
+            state.nebulae.push(new Nebula());
+        }
+        
+        // Create initial planets
+        generatePlanets();
+        
+        // Create space stations
+        for (let i = 0; i < 2; i++) {
+            state.spaceStations.push(new SpaceStation());
+        }
+    }
+    
+    function generatePlanets() {
+        state.planets = [];
+        const numPlanets = 2 + Math.floor(Math.random() * 3);
+        for (let i = 0; i < numPlanets; i++) {
+            const planet = new Planet();
+            // Spread them out in z-space
+            planet.z = 500 + i * 500 + Math.random() * 300;
+            state.planets.push(planet);
+        }
+    }
+    
+    function showMessage(text, duration = 3000) {
+        messageEl.textContent = text;
+        messageEl.classList.add('show');
+        setTimeout(() => {
+            messageEl.classList.remove('show');
+        }, duration);
+    }
+    
+    function updateHUD() {
+        document.querySelector('#speed span').textContent = Math.floor(state.speed / 10);
+        
+        let location = 'UNKNOWN SECTOR';
+        if (state.phase === 'traveling') {
+            location = 'DEEP SPACE';
+        } else if (state.phase === 'approaching') {
+            location = 'PLANETARY SYSTEM';
+        } else if (state.phase === 'exploring' && state.currentPlanet) {
+            location = `${state.currentPlanet.terrainType.toUpperCase()} WORLD`;
+        } else if (state.phase === 'encounter') {
+            location = 'ALIEN CONTACT';
+        } else if (state.phase === 'warp') {
+            location = 'HYPERSPACE';
+        }
+        
+        document.querySelector('#location span').textContent = location;
+        document.querySelector('#encounters span').textContent = state.encounterCount;
+        document.querySelector('#planets span').textContent = state.planetsVisited;
+    }
+    
+    function screenShake() {
+        state.camera.shake = Math.max(0, state.camera.shake - 0.1);
+        if (state.camera.shake > 0) {
+            const shakeX = (Math.random() - 0.5) * state.camera.shake * 10;
+            const shakeY = (Math.random() - 0.5) * state.camera.shake * 10;
+            ctx.translate(shakeX, shakeY);
+        }
+    }
+    
+    function update() {
+        state.time++;
+        state.colorShift += 0.01;
+        
+        // Update speed with more dramatic changes
+        state.speed += (state.targetSpeed - state.speed) * 0.02;
+        
+        // Update all objects
+        state.stars.forEach(star => star.update());
+        state.nebulae.forEach(nebula => nebula.update());
+        state.planets.forEach(planet => planet.update());
+        state.spaceStations.forEach(station => station.update());
+        state.aliens = state.aliens.filter(alien => {
+            alien.update();
+            return alien.z > 0 && Math.abs(alien.x) < 3000 && Math.abs(alien.y) < 3000;
+        });
+        state.particles = state.particles.filter(particle => {
+            particle.update();
+            return particle.life > 0;
+        });
+        
+        // Check for planet approach
+        if (state.phase === 'traveling') {
+            const closestPlanet = state.planets.find(p => p.z < 600 && p.z > 200);
+            if (closestPlanet && Math.random() < 0.005) {
+                state.phase = 'approaching';
+                state.currentPlanet = closestPlanet;
+                state.targetSpeed = 15;
+                showMessage('PLANETARY SYSTEM DETECTED');
+            }
+            
+            // Random space phenomena
+            if (Math.random() < 0.001) {
+                const phenomena = ['GRAVITATIONAL ANOMALY', 'QUANTUM FLUCTUATION', 'DARK MATTER SURGE', 'STELLAR WIND'];
+                showMessage(phenomena[Math.floor(Math.random() * phenomena.length)]);
+                state.camera.shake = 2;
+                for (let i = 0; i < 30; i++) {
+                    state.particles.push(new Particle(
+                        (Math.random() - 0.5) * 200,
+                        (Math.random() - 0.5) * 200,
+                        'alien'
+                    ));
+                }
+            }
+        }
+        
+        // Handle approach
+        if (state.phase === 'approaching' && state.currentPlanet) {
+            if (state.currentPlanet.z < 300) {
+                state.phase = 'exploring';
+                state.targetSpeed = 2;
+                state.planetsVisited++;
+                showMessage(`SCANNING ${state.currentPlanet.terrainType.toUpperCase()} WORLD`);
+                
+                // Chance of alien encounter
+                if (Math.random() < 0.6) {
+                    setTimeout(() => {
+                        if (state.phase === 'exploring') {
+                            const numAliens = 3 + Math.floor(Math.random() * 5);
+                            for (let i = 0; i < numAliens; i++) {
+                                const alien = new Alien();
+                                alien.z = 200 + Math.random() * 300;
+                                state.aliens.push(alien);
+                            }
+                            state.phase = 'encounter';
+                            state.encounterCount++;
+                            showMessage('UNKNOWN LIFEFORMS DETECTED');
+                            state.camera.shake = 1;
+                        }
+                    }, 2000);
+                }
+            }
+        }
+        
+        // Auto-leave planet
+        if ((state.phase === 'exploring' || state.phase === 'encounter') && state.time % 600 === 0) {
+            state.phase = 'traveling';
+            state.targetSpeed = 30;
+            state.aliens = [];
+            state.currentPlanet = null;
+            showMessage('RESUMING EXPLORATION');
+            setTimeout(() => {
+                generatePlanets();
+            }, 2000);
+        }
+        
+        // Random warp jump
+        if (state.phase === 'traveling' && Math.random() < 0.0005) {
+            state.phase = 'warp';
+            state.targetSpeed = 300;
+            showMessage('INITIATING HYPERSPACE JUMP');
+            state.camera.shake = 3;
+            
+            // Warp particles
+            for (let i = 0; i < 100; i++) {
+                state.particles.push(new Particle(
+                    (Math.random() - 0.5) * 500,
+                    (Math.random() - 0.5) * 500,
+                    'warp'
+                ));
+            }
+            
+            setTimeout(() => {
+                state.phase = 'traveling';
+                state.targetSpeed = 30;
+                generatePlanets();
+                // Generate new nebulae after warp
+                state.nebulae = [];
+                for (let i = 0; i < 3; i++) {
+                    state.nebulae.push(new Nebula());
+                }
+                showMessage('HYPERSPACE EXIT COMPLETE');
+            }, 3000);
+        }
+        
+        updateHUD();
+    }
+    
+    function draw() {
+        // Clear with fade effect
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Apply screen shake
+        ctx.save();
+        screenShake();
+        
+        // Draw nebulae (background)
+        state.nebulae.forEach(nebula => nebula.draw());
+        
+        // Draw stars
+        state.stars.forEach(star => star.draw());
+        
+        // Draw space stations
+        state.spaceStations.forEach(station => station.draw());
+        
+        // Draw planets
+        state.planets.forEach(planet => planet.draw());
+        
+        // Draw aliens
+        state.aliens.forEach(alien => alien.draw());
+        
+        // Draw particles
+        state.particles.forEach(particle => particle.draw());
+        
+        // Warp tunnel effect
+        if (state.phase === 'warp') {
+            ctx.strokeStyle = `rgba(100, 200, 255, ${Math.sin(state.time * 0.1) * 0.3 + 0.3})`;
+            for (let i = 0; i < 20; i++) {
+                ctx.lineWidth = i * 0.5;
+                ctx.beginPath();
+                ctx.arc(canvas.width / 2, canvas.height / 2, i * 50, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        }
+        
+        // Speed lines
+        if (state.speed > 60) {
+            ctx.strokeStyle = `rgba(150, 200, 255, ${(state.speed - 60) / 300})`;
+            ctx.lineWidth = 1;
+            for (let i = 0; i < 20; i++) {
+                ctx.beginPath();
+                ctx.moveTo(canvas.width / 2, canvas.height / 2);
+                const angle = (i / 20) * Math.PI * 2 + state.time * 0.01;
+                const length = canvas.width;
+                ctx.lineTo(
+                    canvas.width / 2 + Math.cos(angle) * length,
+                    canvas.height / 2 + Math.sin(angle) * length
+                );
+                ctx.stroke();
+            }
+        }
+        
+        // Vignette effect
+        const vignette = ctx.createRadialGradient(
+            canvas.width / 2, canvas.height / 2, canvas.height * 0.5,
+            canvas.width / 2, canvas.height / 2, canvas.height
+        );
+        vignette.addColorStop(0, 'rgba(0, 0, 0, 0)');
+        vignette.addColorStop(1, 'rgba(0, 0, 20, 0.5)');
+        ctx.fillStyle = vignette;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.restore();
+    }
+    
+    function animate() {
+        update();
+        draw();
+        requestAnimationFrame(animate);
+    }
+    
+    // Handle resize
+    window.addEventListener('resize', () => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    });
+    
+    // Start
+    init();
+    animate();
+    showMessage('STELLAR DRIVE ENGAGED', 3000);
+</script>
+```
+
+</body>
+</html>
