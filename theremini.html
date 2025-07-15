@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Virtual Theremin</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #0a0a0a, #1a1a2e, #16213e);
+            font-family: 'Courier New', monospace;
+            color: #00ffff;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .theremin-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .theremin-field {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+            background: radial-gradient(circle at 50% 50%, rgba(0, 255, 255, 0.1), transparent 70%);
+            transition: background 0.1s ease;
+        }
+
+        .field-lines {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .field-line {
+            position: absolute;
+            background: linear-gradient(90deg, transparent, #00ffff, transparent);
+            height: 2px;
+            opacity: 0.3;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .vertical-line {
+            position: absolute;
+            background: linear-gradient(180deg, transparent, #ff00ff, transparent);
+            width: 2px;
+            opacity: 0.3;
+            animation: pulse 2.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.2; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.02); }
+        }
+
+        .controls {
+            position: absolute;
+            top: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .power-button {
+            background: linear-gradient(145deg, #1a1a2e, #16213e);
+            border: 2px solid #00ffff;
+            color: #00ffff;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .power-button:hover {
+            background: linear-gradient(145deg, #16213e, #1a1a2e);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+        }
+
+        .power-button.active {
+            background: linear-gradient(145deg, #00ffff, #0080ff);
+            color: #000;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.8);
+        }
+
+        .info-panel {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 40px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px 30px;
+            border-radius: 15px;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .meter {
+            text-align: center;
+        }
+
+        .meter-label {
+            font-size: 12px;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .meter-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #00ffff;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
+        }
+
+        .instructions {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 50;
+            transition: opacity 0.5s ease;
+        }
+
+        .instructions h1 {
+            font-size: 48px;
+            margin: 0 0 20px 0;
+            text-shadow: 0 0 20px rgba(0, 255, 255, 0.8);
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from { text-shadow: 0 0 20px rgba(0, 255, 255, 0.8); }
+            to { text-shadow: 0 0 30px rgba(0, 255, 255, 1), 0 0 40px rgba(0, 255, 255, 0.8); }
+        }
+
+        .instructions p {
+            font-size: 18px;
+            margin: 10px 0;
+            opacity: 0.8;
+        }
+
+        .cursor-indicator {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #ff00ff;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 200;
+            transform: translate(-50%, -50%);
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            box-shadow: 0 0 20px rgba(255, 0, 255, 0.8);
+        }
+
+        .cursor-indicator.active {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="theremin-container">
+        <div class="theremin-field" id="thereminField">
+            <div class="field-lines" id="fieldLines"></div>
+            <div class="cursor-indicator" id="cursorIndicator"></div>
+        </div>
+
+        <div class="controls">
+            <button class="power-button" id="powerButton">Power On</button>
+        </div>
+
+        <div class="instructions" id="instructions">
+            <h1>VIRTUAL THEREMIN</h1>
+            <p>Click POWER ON to activate</p>
+            <p>Move mouse horizontally for PITCH</p>
+            <p>Move mouse vertically for VOLUME</p>
+        </div>
+
+        <div class="info-panel">
+            <div class="meter">
+                <div class="meter-label">Frequency</div>
+                <div class="meter-value" id="frequencyDisplay">0 Hz</div>
+            </div>
+            <div class="meter">
+                <div class="meter-label">Volume</div>
+                <div class="meter-value" id="volumeDisplay">0%</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class VirtualTheremin {
+            constructor() {
+                this.audioContext = null;
+                this.oscillator = null;
+                this.gainNode = null;
+                this.isActive = false;
+                this.minFreq = 65;  // C2
+                this.maxFreq = 2093; // C7
+                
+                this.powerButton = document.getElementById('powerButton');
+                this.thereminField = document.getElementById('thereminField');
+                this.instructions = document.getElementById('instructions');
+                this.frequencyDisplay = document.getElementById('frequencyDisplay');
+                this.volumeDisplay = document.getElementById('volumeDisplay');
+                this.cursorIndicator = document.getElementById('cursorIndicator');
+                
+                this.setupEventListeners();
+                this.createFieldLines();
+            }
+
+            setupEventListeners() {
+                this.powerButton.addEventListener('click', () => {
+                    this.togglePower();
+                });
+
+                this.thereminField.addEventListener('mousemove', (e) => {
+                    if (this.isActive) {
+                        this.handleMouseMove(e);
+                    }
+                });
+
+                this.thereminField.addEventListener('mouseenter', () => {
+                    if (this.isActive) {
+                        this.cursorIndicator.classList.add('active');
+                    }
+                });
+
+                this.thereminField.addEventListener('mouseleave', () => {
+                    this.cursorIndicator.classList.remove('active');
+                    if (this.isActive && this.gainNode) {
+                        this.gainNode.gain.setTargetAtTime(0, this.audioContext.currentTime, 0.1);
+                        this.updateDisplay(0, 0);
+                    }
+                });
+            }
+
+            createFieldLines() {
+                const fieldLines = document.getElementById('fieldLines');
+                
+                // Horizontal field lines
+                for (let i = 0; i < 8; i++) {
+                    const line = document.createElement('div');
+                    line.className = 'field-line';
+                    line.style.top = `${10 + i * 12}%`;
+                    line.style.width = '100%';
+                    line.style.animationDelay = `${i * 0.2}s`;
+                    fieldLines.appendChild(line);
+                }
+
+                // Vertical field lines
+                for (let i = 0; i < 12; i++) {
+                    const line = document.createElement('div');
+                    line.className = 'vertical-line';
+                    line.style.left = `${5 + i * 8}%`;
+                    line.style.height = '100%';
+                    line.style.animationDelay = `${i * 0.15}s`;
+                    fieldLines.appendChild(line);
+                }
+            }
+
+            async togglePower() {
+                if (!this.isActive) {
+                    await this.startTheremin();
+                } else {
+                    this.stopTheremin();
+                }
+            }
+
+            async startTheremin() {
+                try {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    
+                    // Create oscillator and gain node
+                    this.oscillator = this.audioContext.createOscillator();
+                    this.gainNode = this.audioContext.createGain();
+                    
+                    // Configure oscillator
+                    this.oscillator.type = 'sine';
+                    this.oscillator.frequency.setValueAtTime(440, this.audioContext.currentTime);
+                    
+                    // Configure gain (volume)
+                    this.gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
+                    
+                    // Connect audio nodes
+                    this.oscillator.connect(this.gainNode);
+                    this.gainNode.connect(this.audioContext.destination);
+                    
+                    // Start oscillator
+                    this.oscillator.start();
+                    
+                    this.isActive = true;
+                    this.powerButton.textContent = 'Power Off';
+                    this.powerButton.classList.add('active');
+                    this.instructions.style.opacity = '0';
+                    
+                } catch (error) {
+                    console.error('Failed to start theremin:', error);
+                }
+            }
+
+            stopTheremin() {
+                if (this.oscillator) {
+                    this.oscillator.stop();
+                    this.oscillator = null;
+                }
+                
+                if (this.audioContext) {
+                    this.audioContext.close();
+                    this.audioContext = null;
+                }
+                
+                this.gainNode = null;
+                this.isActive = false;
+                this.powerButton.textContent = 'Power On';
+                this.powerButton.classList.remove('active');
+                this.instructions.style.opacity = '1';
+                this.cursorIndicator.classList.remove('active');
+                
+                this.updateDisplay(0, 0);
+            }
+
+            handleMouseMove(e) {
+                const rect = this.thereminField.getBoundingClientRect();
+                const x = (e.clientX - rect.left) / rect.width;
+                const y = 1 - (e.clientY - rect.top) / rect.height; // Invert Y axis
+                
+                // Calculate frequency (logarithmic scale for musical intervals)
+                const frequency = this.minFreq * Math.pow(this.maxFreq / this.minFreq, x);
+                
+                // Calculate volume (linear scale)
+                const volume = Math.max(0, Math.min(1, y));
+                
+                // Update audio
+                if (this.oscillator && this.gainNode && this.audioContext) {
+                    this.oscillator.frequency.setTargetAtTime(frequency, this.audioContext.currentTime, 0.05);
+                    this.gainNode.gain.setTargetAtTime(volume * 0.3, this.audioContext.currentTime, 0.05);
+                }
+                
+                // Update cursor indicator
+                this.cursorIndicator.style.left = `${e.clientX - rect.left}px`;
+                this.cursorIndicator.style.top = `${e.clientY - rect.top}px`;
+                
+                // Update visual feedback
+                this.updateFieldVisualization(x, y);
+                this.updateDisplay(frequency, volume);
+            }
+
+            updateFieldVisualization(x, y) {
+                const intensity = y;
+                const hue = x * 60; // 0-60 degrees (red to yellow)
+                
+                this.thereminField.style.background = `
+                    radial-gradient(circle at ${x * 100}% ${(1-y) * 100}%, 
+                    hsla(${hue}, 100%, 50%, ${intensity * 0.3}), 
+                    transparent 70%)
+                `;
+            }
+
+            updateDisplay(frequency, volume) {
+                this.frequencyDisplay.textContent = `${Math.round(frequency)} Hz`;
+                this.volumeDisplay.textContent = `${Math.round(volume * 100)}%`;
+            }
+        }
+
+        // Initialize theremin when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new VirtualTheremin();
+        });
+    </script>
+</body>
+</html>

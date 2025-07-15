@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solikoban: Turtle Fever</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #74b9ff 0%, #0984e3 50%, #74b9ff 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .game-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            max-width: 800px;
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            color: #2d3436;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .level-info {
+            margin-bottom: 20px;
+            color: #636e72;
+        }
+
+        .level-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #2d3436;
+            margin-bottom: 5px;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .stat {
+            background: #ddd;
+            padding: 8px 15px;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+
+        .completion-banner {
+            background: linear-gradient(45deg, #00b894, #00cec9);
+            color: white;
+            padding: 15px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            font-weight: bold;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .game-board {
+            display: inline-block;
+            border: 4px solid #2d3436;
+            border-radius: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            margin-bottom: 25px;
+            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .game-row {
+            display: flex;
+        }
+
+        .tile {
+            width: 35px;
+            height: 35px;
+            border: 1px solid #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            position: relative;
+        }
+
+        .tile.empty { background: #ecf0f1; }
+        .tile.wall { background: #2d3436; }
+        .tile.box { background: #f39c12; }
+        .tile.target { background: #e17055; }
+        .tile.box-on-target { background: #00b894; }
+        .tile.player-on-target { background: #e17055; }
+
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-rows: 1fr 1fr 1fr;
+            gap: 10px;
+            max-width: 200px;
+            margin: 0 auto 20px;
+        }
+
+        .btn {
+            padding: 12px 16px;
+            border: none;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-move {
+            background: #74b9ff;
+            color: white;
+        }
+
+        .btn-move:hover {
+            background: #0984e3;
+        }
+
+        .btn-control {
+            background: #fdcb6e;
+            color: #2d3436;
+        }
+
+        .btn-control:hover {
+            background: #e17055;
+            color: white;
+        }
+
+        .btn-nav {
+            background: #a29bfe;
+            color: white;
+        }
+
+        .btn-nav:hover {
+            background: #6c5ce7;
+        }
+
+        .btn-nav:disabled {
+            background: #b2bec3;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .action-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .nav-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .instructions {
+            background: #f1f2f6;
+            padding: 20px;
+            border-radius: 15px;
+            color: #2d3436;
+            max-width: 600px;
+            margin: 0 auto;
+            text-align: left;
+        }
+
+        .instructions h3 {
+            color: #2d3436;
+            margin-top: 0;
+            text-align: center;
+        }
+
+        .loading {
+            font-size: 1.2em;
+            color: #74b9ff;
+            margin: 50px 0;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #74b9ff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .up-btn { grid-column: 2; grid-row: 1; }
+        .left-btn { grid-column: 1; grid-row: 2; }
+        .right-btn { grid-column: 3; grid-row: 2; }
+        .down-btn { grid-column: 2; grid-row: 3; }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🐢 Solikoban: Turtle Fever</h1>
+        
+        <div id="gameContent">
+            <div class="loading">
+                🧠 Generating your first puzzle...
+                <div class="spinner"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Game constants
+        const EMPTY = 0;
+        const WALL = 1;
+        const BOX = 2;
+        const TARGET = 3;
+        const PLAYER = 4;
+        const BOX_ON_TARGET = 5;
+
+        // Game state
+        let currentLevel = 0;
+        let gameMap = [];
+        let playerPos = { x: 0, y: 0 };
+        let moves = 0;
+        let isCompleted = false;
+        let history = [];
+        let generatedLevels = [];
+
+        // Predefined interesting levels that gradually increase in difficulty
+        const baseLevels = [
+            // Level 1: Simple introduction
+            {
+                name: "First Steps",
+                map: [
+                    [1,1,1,1,1,1],
+                    [1,0,0,0,0,1],
+                    [1,0,2,0,3,1],
+                    [1,0,0,0,0,1],
+                    [1,1,1,1,1,1]
+                ],
+                playerStart: { x: 1, y: 1 }
+            },
+            // Level 2: Two boxes
+            {
+                name: "Double Trouble",
+                map: [
+                    [1,1,1,1,1,1,1],
+                    [1,0,0,0,0,0,1],
+                    [1,0,2,0,2,0,1],
+                    [1,0,0,0,0,0,1],
+                    [1,3,0,0,0,3,1],
+                    [1,1,1,1,1,1,1]
+                ],
+                playerStart: { x: 3, y: 2 }
+            },
+            // Level 3: Corridor challenge
+            {
+                name: "Narrow Escape",
+                map: [
+                    [1,1,1,1,1,1,1,1],
+                    [1,0,0,0,1,0,0,1],
+                    [1,0,2,0,1,0,2,1],
+                    [1,0,0,0,0,0,0,1],
+                    [1,3,0,0,0,0,3,1],
+                    [1,1,1,1,1,1,1,1]
+                ],
+                playerStart: { x: 1, y: 1 }
+            },
+            // Level 4: Box sequence
+            {
+                name: "Chain Reaction",
+                map: [
+                    [1,1,1,1,1,1,1,1],
+                    [1,0,0,0,0,0,0,1],
+                    [1,0,2,2,2,0,0,1],
+                    [1,0,0,0,0,0,0,1],
+                    [1,0,3,3,3,0,0,1],
+                    [1,0,0,0,0,0,0,1],
+                    [1,1,1,1,1,1,1,1]
+                ],
+                playerStart: { x: 6, y: 2 }
+            },
+            // Level 5: Chambers
+            {
+                name: "Split Decision",
+                map: [
+                    [1,1,1,1,1,1,1,1,1],
+                    [1,0,0,1,0,1,0,0,1],
+                    [1,0,2,1,0,1,2,0,1],
+                    [1,0,0,0,0,0,0,0,1],
+                    [1,0,3,1,0,1,3,0,1],
+                    [1,0,0,1,0,1,0,0,1],
+                    [1,1,1,1,1,1,1,1,1]
+                ],
+                playerStart: { x: 4, y: 3 }
+            },
+            // Level 6: Deadend trap
+            {
+                name: "Dead End Blues",
+                map: [
+                    [1,1,1,1,1,1,1,1],
+                    [1,0,0,0,0,0,0,1],
+                    [1,0,1,1,1,1,0,1],
+                    [1,0,1,2,3,1,0,1],
+                    [1,0,1,2,3,1,0,1],
+                    [1,0,1,1,0,1,0,1],
+                    [1,0,0,0,0,0,0,1],
+                    [1,1,1,1,1,1,1,1]
+                ],
+                playerStart: { x: 4, y: 5 }
+            }
+        ];
+
+        // Procedural generation for levels beyond the base set
+        function generateProceduralLevel(level) {
+            const difficulty = level - baseLevels.length;
+            const size = Math.min(8 + Math.floor(difficulty / 2), 14);
+            const numBoxes = Math.min(3 + Math.floor(difficulty / 2), 8);
+            
+            // Use different generation strategies based on difficulty
+            if (difficulty < 5) {
+                return generateSimpleLevel(size, numBoxes, level);
+            } else if (difficulty < 10) {
+                return generateCorridorLevel(size, numBoxes, level);
+            } else {
+                return generateComplexLevel(size, numBoxes, level);
+            }
+        }
+
+        function generateSimpleLevel(size, numBoxes, level) {
+            const map = Array(size).fill().map(() => Array(size).fill(EMPTY));
+            
+            // Perimeter walls
+            for (let x = 0; x < size; x++) {
+                map[0][x] = WALL;
+                map[size - 1][x] = WALL;
+            }
+            for (let y = 0; y < size; y++) {
+                map[y][0] = WALL;
+                map[y][size - 1] = WALL;
+            }
+
+            // Add some internal walls for structure
+            const numWalls = Math.floor(size * 0.3);
+            for (let i = 0; i < numWalls; i++) {
+                const x = 2 + Math.floor(Math.random() * (size - 4));
+                const y = 2 + Math.floor(Math.random() * (size - 4));
+                if (map[y][x] === EMPTY) {
+                    map[y][x] = WALL;
+                }
+            }
+
+            // Place boxes and targets with good spacing
+            const positions = [];
+            for (let y = 1; y < size - 1; y++) {
+                for (let x = 1; x < size - 1; x++) {
+                    if (map[y][x] === EMPTY) {
+                        positions.push({ x, y });
+                    }
+                }
+            }
+
+            if (positions.length < numBoxes * 2 + 1) {
+                return generateFallbackLevel(level);
+            }
+
+            // Shuffle positions
+            for (let i = positions.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [positions[i], positions[j]] = [positions[j], positions[i]];
+            }
+
+            // Place player
+            const playerStart = positions.pop();
+
+            // Place boxes and targets with strategic separation
+            for (let i = 0; i < numBoxes && positions.length >= 2; i++) {
+                const boxPos = positions.splice(Math.floor(Math.random() * positions.length), 1)[0];
+                
+                // Find a target position that's not too close
+                let targetPos;
+                let attempts = 0;
+                do {
+                    const index = Math.floor(Math.random() * positions.length);
+                    targetPos = positions[index];
+                    const distance = Math.abs(boxPos.x - targetPos.x) + Math.abs(boxPos.y - targetPos.y);
+                    if (distance >= 2 || attempts > 10) {
+                        positions.splice(index, 1);
+                        break;
+                    }
+                    attempts++;
+                } while (attempts < 20);
+
+                if (targetPos) {
+                    map[boxPos.y][boxPos.x] = BOX;
+                    map[targetPos.y][targetPos.x] = TARGET;
+                }
+            }
+
+            return {
+                name: `Level ${level + 1} - Simple Challenge`,
+                map: map,
+                playerStart: playerStart
+            };
+        }
+
+        function generateCorridorLevel(size, numBoxes, level) {
+            const map = Array(size).fill().map(() => Array(size).fill(EMPTY));
+            
+            // Perimeter walls
+            for (let x = 0; x < size; x++) {
+                map[0][x] = WALL;
+                map[size - 1][x] = WALL;
+            }
+            for (let y = 0; y < size; y++) {
+                map[y][0] = WALL;
+                map[y][size - 1] = WALL;
+            }
+
+            // Create corridor system
+            const midY = Math.floor(size / 2);
+            const midX = Math.floor(size / 2);
+
+            // Horizontal corridor
+            for (let x = 2; x < size - 2; x++) {
+                if (x !== midX) {
+                    map[midY - 1][x] = WALL;
+                    map[midY + 1][x] = WALL;
+                }
+            }
+
+            // Vertical separators with gaps
+            for (let i = 0; i < 2; i++) {
+                const wallX = 3 + i * (size - 6);
+                for (let y = 2; y < size - 2; y++) {
+                    if (y !== midY) {
+                        map[y][wallX] = WALL;
+                    }
+                }
+            }
+
+            // Place boxes and targets in different sections
+            const sections = [
+                { minX: 1, maxX: 3, minY: 1, maxY: size - 1 },
+                { minX: midX - 1, maxX: midX + 1, minY: 1, maxY: midY - 1 },
+                { minX: midX - 1, maxX: midX + 1, minY: midY + 1, maxY: size - 1 },
+                { minX: size - 4, maxX: size - 1, minY: 1, maxY: size - 1 }
+            ];
+
+            let boxCount = 0;
+            for (const section of sections) {
+                if (boxCount >= numBoxes) break;
+                
+                const sectionPositions = [];
+                for (let y = section.minY; y < section.maxY; y++) {
+                    for (let x = section.minX; x < section.maxX; x++) {
+                        if (map[y][x] === EMPTY) {
+                            sectionPositions.push({ x, y });
+                        }
+                    }
+                }
+
+                if (sectionPositions.length >= 2) {
+                    const boxPos = sectionPositions[Math.floor(Math.random() * sectionPositions.length)];
+                    let targetSection = sections[(sections.indexOf(section) + 2) % sections.length];
+                    
+                    const targetPositions = [];
+                    for (let y = targetSection.minY; y < targetSection.maxY; y++) {
+                        for (let x = targetSection.minX; x < targetSection.maxX; x++) {
+                            if (map[y][x] === EMPTY) {
+                                targetPositions.push({ x, y });
+                            }
+                        }
+                    }
+
+                    if (targetPositions.length > 0) {
+                        const targetPos = targetPositions[Math.floor(Math.random() * targetPositions.length)];
+                        map[boxPos.y][boxPos.x] = BOX;
+                        map[targetPos.y][targetPos.x] = TARGET;
+                        boxCount++;
+                    }
+                }
+            }
+
+            return {
+                name: `Level ${level + 1} - Corridor Maze`,
+                map: map,
+                playerStart: { x: midX, y: midY }
+            };
+        }
+
+        function generateComplexLevel(size, numBoxes, level) {
+            const map = Array(size).fill().map(() => Array(size).fill(EMPTY));
+            
+            // Perimeter walls
+            for (let x = 0; x < size; x++) {
+                map[0][x] = WALL;
+                map[size - 1][x] = WALL;
+            }
+            for (let y = 0; y < size; y++) {
+                map[y][0] = WALL;
+                map[y][size - 1] = WALL;
+            }
+
+            // Create complex room structure
+            const roomSize = Math.floor(size / 3);
+            
+            for (let roomY = 0; roomY < 2; roomY++) {
+                for (let roomX = 0; roomX < 2; roomX++) {
+                    const startX = 2 + roomX * (roomSize + 1);
+                    const startY = 2 + roomY * (roomSize + 1);
+                    
+                    // Room walls
+                    for (let x = startX; x < startX + roomSize; x++) {
+                        map[startY][x] = WALL;
+                        map[startY + roomSize - 1][x] = WALL;
+                    }
+                    for (let y = startY; y < startY + roomSize; y++) {
+                        map[y][startX] = WALL;
+                        map[y][startX + roomSize - 1] = WALL;
+                    }
+                    
+                    // Door
+                    const doorX = startX + Math.floor(roomSize / 2);
+                    const doorY = startY + Math.floor(roomSize / 2);
+                    map[doorY][startX] = EMPTY;
+                }
+            }
+
+            // Place boxes and targets strategically
+            const roomCenters = [
+                { x: 3 + Math.floor(roomSize / 2), y: 3 + Math.floor(roomSize / 2) },
+                { x: 3 + roomSize + 1 + Math.floor(roomSize / 2), y: 3 + Math.floor(roomSize / 2) },
+                { x: 3 + Math.floor(roomSize / 2), y: 3 + roomSize + 1 + Math.floor(roomSize / 2) },
+                { x: 3 + roomSize + 1 + Math.floor(roomSize / 2), y: 3 + roomSize + 1 + Math.floor(roomSize / 2) }
+            ];
+
+            for (let i = 0; i < Math.min(numBoxes, roomCenters.length); i++) {
+                const boxRoom = roomCenters[i];
+                const targetRoom = roomCenters[(i + 2) % roomCenters.length];
+                
+                if (map[boxRoom.y][boxRoom.x] === EMPTY) {
+                    map[boxRoom.y][boxRoom.x] = BOX;
+                }
+                if (map[targetRoom.y][targetRoom.x] === EMPTY) {
+                    map[targetRoom.y][targetRoom.x] = TARGET;
+                }
+            }
+
+            return {
+                name: `Level ${level + 1} - Master Challenge`,
+                map: map,
+                playerStart: { x: 1, y: 1 }
+            };
+        }
+
+        function generateFallbackLevel(level) {
+            const size = 8;
+            return {
+                name: `Level ${level + 1} - Fallback`,
+                map: [
+                    [1,1,1,1,1,1,1,1],
+                    [1,0,0,0,0,0,0,1],
+                    [1,0,2,0,0,3,0,1],
+                    [1,0,0,0,0,0,0,1],
+                    [1,0,3,0,0,2,0,1],
+                    [1,0,0,0,0,0,0,1],
+                    [1,1,1,1,1,1,1,1]
+                ],
+                playerStart: { x: 1, y: 1 }
+            };
+        }
+
+        function getLevel(levelNum) {
+            if (levelNum < baseLevels.length) {
+                return baseLevels[levelNum];
+            }
+            
+            if (!generatedLevels[levelNum]) {
+                generatedLevels[levelNum] = generateProceduralLevel(levelNum);
+            }
+            
+            return generatedLevels[levelNum];
+        }
+
+        function initGame() {
+            const level = getLevel(currentLevel);
+            gameMap = level.map.map(row => [...row]);
+            playerPos = { ...level.playerStart };
+            moves = 0;
+            isCompleted = false;
+            history = [];
+            
+            renderGame();
+        }
+
+        function checkCompletion() {
+            for (let y = 0; y < gameMap.length; y++) {
+                for (let x = 0; x < gameMap[y].length; x++) {
+                    if (gameMap[y][x] === TARGET) {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        function movePlayer(dx, dy) {
+            if (isCompleted) return;
+
+            const newX = playerPos.x + dx;
+            const newY = playerPos.y + dy;
+
+            if (newY < 0 || newY >= gameMap.length || newX < 0 || newX >= gameMap[0].length) {
+                return;
+            }
+
+            const targetTile = gameMap[newY][newX];
+            
+            if (targetTile === WALL) {
+                return;
+            }
+
+            const currentState = {
+                map: gameMap.map(row => [...row]),
+                playerPos: { ...playerPos },
+                moves
+            };
+
+            let newMap = gameMap.map(row => [...row]);
+            let canMove = true;
+
+            if (targetTile === BOX || targetTile === BOX_ON_TARGET) {
+                const boxNewX = newX + dx;
+                const boxNewY = newY + dy;
+
+                if (boxNewY < 0 || boxNewY >= newMap.length || 
+                    boxNewX < 0 || boxNewX >= newMap[0].length ||
+                    newMap[boxNewY][boxNewX] === WALL ||
+                    newMap[boxNewY][boxNewX] === BOX ||
+                    newMap[boxNewY][boxNewX] === BOX_ON_TARGET) {
+                    canMove = false;
+                } else {
+                    const wasBoxOnTarget = targetTile === BOX_ON_TARGET;
+                    const isNewPosTarget = newMap[boxNewY][boxNewX] === TARGET;
+                    
+                    newMap[boxNewY][boxNewX] = isNewPosTarget ? BOX_ON_TARGET : BOX;
+                    newMap[newY][newX] = wasBoxOnTarget ? TARGET : EMPTY;
+                }
+            }
+
+            if (canMove) {
+                history.push(currentState);
+                gameMap = newMap;
+                playerPos = { x: newX, y: newY };
+                moves++;
+
+                if (checkCompletion()) {
+                    isCompleted = true;
+                }
+                
+                renderGame();
+            }
+        }
+
+        function undoMove() {
+            if (history.length === 0) return;
+            
+            const lastState = history.pop();
+            gameMap = lastState.map;
+            playerPos = lastState.playerPos;
+            moves = lastState.moves;
+            isCompleted = false;
+            renderGame();
+        }
+
+        function resetLevel() {
+            initGame();
+        }
+
+        function nextLevel() {
+            currentLevel++;
+            initGame();
+        }
+
+        function prevLevel() {
+            if (currentLevel > 0) {
+                currentLevel--;
+                initGame();
+            }
+        }
+
+        function regenerateLevel() {
+            if (currentLevel >= baseLevels.length) {
+                generatedLevels[currentLevel] = generateProceduralLevel(currentLevel);
+                initGame();
+            }
+        }
+
+        function renderGame() {
+            const level = getLevel(currentLevel);
+            const gameContent = document.getElementById('gameContent');
+            
+            // Count boxes and targets for statistics
+            let totalBoxes = 0;
+            let completedBoxes = 0;
+            
+            for (let y = 0; y < gameMap.length; y++) {
+                for (let x = 0; x < gameMap[y].length; x++) {
+                    if (gameMap[y][x] === BOX) totalBoxes++;
+                    if (gameMap[y][x] === BOX_ON_TARGET) {
+                        totalBoxes++;
+                        completedBoxes++;
+                    }
+                }
+            }
+            
+            gameContent.innerHTML = `
+                <div class="level-info">
+                    <div class="level-title">Level ${currentLevel + 1}: ${level.name}</div>
+                    <div class="stats">
+                        <div class="stat">Moves: ${moves}</div>
+                        <div class="stat">Boxes: ${completedBoxes}/${totalBoxes}</div>
+                        <div class="stat">Progress: ${currentLevel >= baseLevels.length ? 'Procedural' : 'Crafted'}</div>
+                    </div>
+                </div>
+
+                ${isCompleted ? `
+                    <div class="completion-banner">
+                        🎉 Level ${currentLevel + 1} Complete! 🎉<br>
+                        Solved in ${moves} moves! Ready for the next challenge?
+                    </div>
+                ` : ''}
+
+                <div class="game-board">
+                    ${gameMap.map(row => `
+                        <div class="game-row">
+                            ${row.map((tile, x) => {
+                                const y = gameMap.indexOf(row);
+                                const isPlayerHere = playerPos.x === x && playerPos.y === y;
+                                
+                                let tileClass = 'tile ';
+                                let content = '';
+                                
+                                if (isPlayerHere) {
+                                    content = '🐢';
+                                    if (tile === TARGET) tileClass += 'player-on-target';
+                                    else tileClass += 'empty';
+                                } else {
+                                    switch (tile) {
+                                        case WALL:
+                                            tileClass += 'wall';
+                                            content = '🧱';
+                                            break;
+                                        case BOX:
+                                            tileClass += 'box';
+                                            content = '📦';
+                                            break;
+                                        case TARGET:
+                                            tileClass += 'target';
+                                            content = '🎯';
+                                            break;
+                                        case BOX_ON_TARGET:
+                                            tileClass += 'box-on-target';
+                                            content = '✅';
+                                            break;
+                                        default:
+                                            tileClass += 'empty';
+                                            break;
+                                    }
+                                }
+                                
+                                return `<div class="${tileClass}">${content}</div>`;
+                            }).join('')}
+                        </div>
+                    `).join('')}
+                </div>
+
+                <div class="controls">
+                    <button class="btn btn-move up-btn" onclick="movePlayer(0, -1)">⬆️</button>
+                    <button class="btn btn-move left-btn" onclick="movePlayer(-1, 0)">⬅️</button>
+                    <button class="btn btn-move right-btn" onclick="movePlayer(1, 0)">➡️</button>
+                    <button class="btn btn-move down-btn" onclick="movePlayer(0, 1)">⬇️</button>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-control" onclick="undoMove()" ${history.length === 0 ? 'disabled' : ''}>
+                        ↩️ Undo
+                    </button>
+                    <button class="btn btn-control" onclick="resetLevel()">
+                        🔄 Reset
+                    </button>
+                    ${currentLevel >= baseLevels.length ? `
+                        <button class="btn btn-control" onclick="regenerateLevel()">
+                            🎲 New Puzzle
+                        </button>
+                    ` : ''}
+                </div>
+
+                <div class="nav-buttons">
+                    <button class="btn btn-nav" onclick="prevLevel()" ${currentLevel === 0 ? 'disabled' : ''}>
+                        ⬅️ Previous
+                    </button>
+                    <button class="btn btn-nav" onclick="nextLevel()" ${!isCompleted && currentLevel > 0 ? 'disabled' : ''}>
+                        Next ➡️
+                    </button>
+                </div>
+
+                <div class="instructions">
+                    <h3>🐢 How to Play Solikoban</h3>
+                    <p><strong>Goal:</strong> Push all the brown boxes (📦) onto the red targets (🎯) to turn them green (✅)</p>
+                    <p><strong>Controls:</strong> Use arrow keys, WASD, or the buttons to move your turtle</p>
+                    <p><strong>Rules:</strong> You can only push boxes, not pull them. Plan your moves carefully!</p>
+                    <p><strong>Tips:</strong> Undo with Ctrl+Z, reset with R, and think several moves ahead</p>
+                    <p><strong>Levels:</strong> Hand-crafted puzzles (1-${baseLevels.length}) then infinite procedural challenges!</p>
+                </div>
+            `;
+        }
+
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            switch (e.key) {
+                case 'ArrowUp':
+                case 'w':
+                case 'W':
+                    e.preventDefault();
+                    movePlayer(0, -1);
+                    break;
+                case 'ArrowDown':
+                case 's':
+                case 'S':
+                    e.preventDefault();
+                    movePlayer(0, 1);
+                    break;
+                case 'ArrowLeft':
+                case 'a':
+                case 'A':
+                    e.preventDefault();
+                    movePlayer(-1, 0);
+                    break;
+                case 'ArrowRight':
+                case 'd':
+                case 'D':
+                    e.preventDefault();
+                    movePlayer(1, 0);
+                    break;
+                case 'z':
+                case 'Z':
+                    if (e.ctrlKey) {
+                        e.preventDefault();
+                        undoMove();
+                    }
+                    break;
+                case 'r':
+                case 'R':
+                    e.preventDefault();
+                    resetLevel();
+                    break;
+                case 'n':
+                case 'N':
+                    e.preventDefault();
+                    regenerateLevel();
+                    break;
+            }
+        });
+
+        // Initialize the game
+        initGame();
+    </script>
+</body>
+</html>
