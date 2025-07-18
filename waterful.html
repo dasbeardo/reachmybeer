@@ -5,23 +5,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
     <title>TOMY Waterful Game</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.70.0/phaser.min.js"></script>
     <style>
         * {
+            margin: 0;
+            padding: 0;
             box-sizing: border-box;
             -webkit-touch-callout: none;
             -webkit-user-select: none;
-            -khtml-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
             user-select: none;
             -webkit-tap-highlight-color: transparent;
         }
 
 ```
     body {
-        margin: 0;
-        padding: 10px;
         background: linear-gradient(135deg, #1e3c72, #2a5298);
         display: flex;
         flex-direction: column;
@@ -39,145 +35,64 @@
         background: linear-gradient(145deg, #333, #222);
         padding: 15px;
         border-radius: 25px;
-        box-shadow: 
-            0 15px 35px rgba(0,0,0,0.7),
-            inset 0 2px 5px rgba(255,255,255,0.1);
+        box-shadow: 0 15px 35px rgba(0,0,0,0.7);
         border: 3px solid #555;
-        width: 100%;
-        max-width: 380px;
-        height: 100vh;
-        max-height: 650px;
+        width: 90vw;
+        max-width: 400px;
+        height: 80vh;
+        max-height: 600px;
         display: flex;
         flex-direction: column;
-        position: relative;
     }
     
-    .game-title {
+    .title {
         text-align: center;
         color: #fff;
-        margin-bottom: 8px;
-        font-size: clamp(16px, 4vw, 20px);
+        font-size: 18px;
         font-weight: bold;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
-        background: linear-gradient(45deg, #00aaff, #ff6b6b);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
+        margin-bottom: 10px;
     }
     
-    .instructions {
+    .status {
         text-align: center;
         color: #ffff00;
+        font-size: 12px;
         margin-bottom: 10px;
-        font-size: clamp(11px, 2.8vw, 14px);
-        font-weight: bold;
-        line-height: 1.3;
-        background: rgba(0,0,0,0.3);
-        padding: 8px;
-        border-radius: 8px;
-        border: 1px solid rgba(255,255,0,0.3);
+        min-height: 30px;
     }
     
-    .score {
-        text-align: center;
-        color: #00ff88;
-        margin-bottom: 8px;
-        font-size: clamp(12px, 3vw, 16px);
-        font-weight: bold;
-    }
-    
-    #game {
+    #gameCanvas {
         flex: 1;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        border-radius: 15px;
-        overflow: hidden;
+        border: 3px solid #222;
+        border-radius: 10px;
         background: linear-gradient(180deg, #87ceeb 0%, #4682b4 100%);
-        box-shadow: inset 0 4px 15px rgba(0,0,0,0.3);
+        max-width: 100%;
+        max-height: 100%;
     }
     
-    .pressure-button {
+    .controls {
+        margin-top: 15px;
+        text-align: center;
+    }
+    
+    .water-button {
         background: linear-gradient(45deg, #ff4444, #cc0000);
         border: none;
         color: white;
-        padding: 25px;
+        padding: 20px;
         border-radius: 50%;
-        font-size: clamp(16px, 4vw, 20px);
+        font-size: 16px;
         font-weight: bold;
         cursor: pointer;
-        transition: all 0.1s;
-        box-shadow: 
-            0 6px 20px rgba(255,68,68,0.4),
-            inset 0 2px 5px rgba(255,255,255,0.2);
-        margin-top: 15px;
+        box-shadow: 0 6px 20px rgba(255,68,68,0.4);
         width: 80px;
         height: 80px;
         touch-action: manipulation;
-        position: relative;
-        align-self: center;
     }
     
-    .pressure-button:active,
-    .pressure-button.active {
+    .water-button:active {
         transform: translateY(3px) scale(0.95);
-        box-shadow: 
-            0 3px 10px rgba(255,68,68,0.8),
-            inset 0 -2px 5px rgba(0,0,0,0.3);
-        background: linear-gradient(45deg, #cc0000, #990000);
-    }
-    
-    .tilt-indicator {
-        position: absolute;
-        top: 20px;
-        right: 20px;
-        width: 60px;
-        height: 60px;
-        border: 2px solid rgba(255,255,255,0.3);
-        border-radius: 50%;
-        background: rgba(0,0,0,0.2);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    
-    .tilt-dot {
-        width: 8px;
-        height: 8px;
-        background: #00ff88;
-        border-radius: 50%;
-        transition: transform 0.1s;
-        box-shadow: 0 0 10px #00ff88;
-    }
-    
-    canvas {
-        max-width: 100%;
-        max-height: 100%;
-        border-radius: 10px;
-    }
-
-    .gyro-status {
-        position: absolute;
-        top: 20px;
-        left: 20px;
-        color: #fff;
-        font-size: 12px;
-        background: rgba(0,0,0,0.5);
-        padding: 5px 8px;
-        border-radius: 5px;
-        border: 1px solid rgba(255,255,255,0.2);
-    }
-
-    @media (max-height: 600px) {
-        .game-container {
-            padding: 10px;
-            max-height: 500px;
-        }
-        .pressure-button {
-            width: 70px;
-            height: 70px;
-            padding: 20px;
-        }
+        box-shadow: 0 3px 10px rgba(255,68,68,0.8);
     }
 </style>
 ```
@@ -185,470 +100,439 @@
 </head>
 <body>
     <div class="game-container">
-        <div class="game-title">🌊 TOMY WATERFUL 🌊</div>
-        <div class="instructions">
-            TILT your phone to guide rings!<br>
-            Tap button for water pressure!
+        <div class="title">🌊 TOMY WATERFUL 🌊</div>
+        <div class="status" id="status">Requesting gyroscope access...</div>
+        <canvas id="gameCanvas"></canvas>
+        <div class="controls">
+            <button class="water-button" id="waterButton">💨<br>PUSH</button>
         </div>
-        <div class="score">Score: <span id="score">0</span> / 4</div>
+    </div>
 
 ```
-    <div class="gyro-status" id="gyroStatus">🔄 Initializing...</div>
-    
-    <div class="tilt-indicator">
-        <div class="tilt-dot" id="tiltDot"></div>
-    </div>
-    
-    <div id="game"></div>
-    
-    <button class="pressure-button" id="pressureButton">💨<br>PUSH</button>
-</div>
-
 <script>
-    class WaterfulGame extends Phaser.Scene {
+    class WaterfulGame {
         constructor() {
-            super({ key: 'WaterfulGame' });
-            this.score = 0;
-            this.rings = [];
-            this.posts = [];
+            this.canvas = document.getElementById('gameCanvas');
+            this.ctx = this.canvas.getContext('2d');
+            this.status = document.getElementById('status');
+            
+            // Set canvas size
+            this.resizeCanvas();
+            window.addEventListener('resize', () => this.resizeCanvas());
+            
+            // Game state
             this.tiltX = 0;
             this.tiltY = 0;
-            this.waterPressureActive = false;
-            this.gameWidth = 320;
-            this.gameHeight = 480;
-            this.gyroEnabled = false;
-        }
-
-        preload() {
-            // Create textures
-            this.add.graphics()
-                .fillStyle(0xff6b6b)
-                .fillCircle(15, 15, 15)
-                .lineStyle(3, 0xffffff, 0.8)
-                .strokeCircle(15, 15, 15)
-                .generateTexture('ring', 30, 30);
-
-            this.add.graphics()
-                .fillStyle(0x4ecdc4)
-                .fillRect(0, 0, 8, 50)
-                .lineStyle(2, 0x339999)
-                .strokeRect(0, 0, 8, 50)
-                .generateTexture('post', 8, 50);
-
-            this.add.graphics()
-                .fillStyle(0x45b7d1)
-                .fillCircle(2, 2, 2)
-                .generateTexture('bubble', 4, 4);
-
-            this.add.graphics()
-                .fillStyle(0x8b4513)
-                .fillRect(0, 0, 320, 20)
-                .generateTexture('ground', 320, 20);
-
-            this.add.graphics()
-                .fillStyle(0x654321)
-                .fillRect(0, 0, 20, 480)
-                .generateTexture('wall', 20, 480);
-        }
-
-        create() {
-            // Physics setup with dynamic gravity
-            this.physics.world.setBounds(0, 0, this.gameWidth, this.gameHeight);
-            this.physics.world.gravity.y = 400;
-
-            // Create environment
-            this.createEnvironment();
-            this.createPosts();
-            this.createRings();
-            this.createWaterEffects();
-            this.setupControls();
-            this.setupCollisions();
-
-            // Initialize gyroscope
-            this.initializeGyroscope();
-
-            // Water resistance simulation
-            this.time.addEvent({
-                delay: 50,
-                callback: this.applyWaterResistance,
-                callbackScope: this,
-                loop: true
-            });
-        }
-
-        createEnvironment() {
-            // Ground
-            const ground = this.add.image(this.gameWidth/2, this.gameHeight - 10, 'ground');
-            this.physics.add.existing(ground, true);
-
-            // Walls
-            const leftWall = this.add.image(10, this.gameHeight/2, 'wall');
-            const rightWall = this.add.image(this.gameWidth - 10, this.gameHeight/2, 'wall');
-            this.physics.add.existing(leftWall, true);
-            this.physics.add.existing(rightWall, true);
-
-            // Water surface effect
-            this.waterSurface = this.add.graphics();
-            this.updateWaterSurface();
-        }
-
-        createPosts() {
-            const postPositions = [
-                { x: 80, y: this.gameHeight - 35 },
-                { x: 160, y: this.gameHeight - 35 },
-                { x: 240, y: this.gameHeight - 35 }
-            ];
-
-            postPositions.forEach(pos => {
-                const post = this.add.image(pos.x, pos.y, 'post');
-                this.physics.add.existing(post, true);
-                this.posts.push(post);
-            });
-        }
-
-        createRings() {
-            const startPositions = [
-                { x: 60, y: 100 },
-                { x: 140, y: 80 },
-                { x: 220, y: 120 },
-                { x: 280, y: 90 }
-            ];
-
-            startPositions.forEach((pos, i) => {
-                const ring = this.physics.add.sprite(pos.x, pos.y, 'ring');
-                ring.setBounce(0.3);
-                ring.setCollideWorldBounds(true);
-                ring.setDrag(80); // Water resistance
-                ring.body.setCircle(15);
-                ring.setData('id', i);
-                this.rings.push(ring);
-            });
-        }
-
-        createWaterEffects() {
-            // Water pressure particles
-            this.waterPressure = this.add.particles(this.gameWidth/2, this.gameHeight - 60, 'bubble', {
-                speed: { min: 100, max: 300 },
-                angle: { min: 260, max: 280 },
-                scale: { start: 0.5, end: 0 },
-                lifespan: 800,
-                frequency: 30,
-                emitting: false,
-                gravityY: -200
-            });
-
-            // Floating bubbles for atmosphere
-            this.ambientBubbles = this.add.particles(0, this.gameHeight, 'bubble', {
-                speed: { min: 20, max: 60 },
-                angle: { min: 270, max: 270 },
-                scale: { start: 0.2, end: 0 },
-                lifespan: 3000,
-                frequency: 500,
-                x: { min: 0, max: this.gameWidth },
-                gravityY: -50,
-                alpha: { start: 0.6, end: 0 }
-            });
-        }
-
-        setupControls() {
-            const pressureButton = document.getElementById('pressureButton');
-
-            // Enhanced button controls
-            const activatePressure = () => {
-                this.waterPressureActive = true;
-                this.waterPressure.start();
-                pressureButton.classList.add('active');
-                this.applyWaterPressure();
-            };
-
-            const deactivatePressure = () => {
-                this.waterPressureActive = false;
-                this.waterPressure.stop();
-                pressureButton.classList.remove('active');
-            };
-
-            // Touch events
-            pressureButton.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                activatePressure();
-            }, { passive: false });
-
-            pressureButton.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                deactivatePressure();
-            }, { passive: false });
-
-            // Mouse events for desktop
-            pressureButton.addEventListener('mousedown', activatePressure);
-            pressureButton.addEventListener('mouseup', deactivatePressure);
-            pressureButton.addEventListener('mouseleave', deactivatePressure);
-
-            // Keyboard for testing
-            this.input.keyboard.on('keydown-SPACE', activatePressure);
-            this.input.keyboard.on('keyup-SPACE', deactivatePressure);
-        }
-
-        initializeGyroscope() {
-            const statusEl = document.getElementById('gyroStatus');
+            this.waterPressure = false;
+            this.rings = [];
+            this.posts = [];
+            this.waterParticles = [];
             
-            if ('DeviceOrientationEvent' in window) {
-                // Request permission on iOS
+            // Physics constants
+            this.gravity = 0.5;
+            this.waterDensity = 0.02;
+            this.buoyancy = 0.3;
+            this.friction = 0.98;
+            
+            this.initGame();
+            this.initGyroscope();
+            this.initControls();
+            this.gameLoop();
+        }
+        
+        resizeCanvas() {
+            const container = this.canvas.parentElement;
+            const rect = container.getBoundingClientRect();
+            const maxWidth = rect.width - 30;
+            const maxHeight = rect.height - 150;
+            
+            this.canvas.width = Math.min(300, maxWidth);
+            this.canvas.height = Math.min(400, maxHeight);
+            
+            this.width = this.canvas.width;
+            this.height = this.canvas.height;
+        }
+        
+        initGame() {
+            // Create posts
+            this.posts = [
+                { x: this.width * 0.25, y: this.height - 30, width: 6, height: 40 },
+                { x: this.width * 0.5, y: this.height - 30, width: 6, height: 40 },
+                { x: this.width * 0.75, y: this.height - 30, width: 6, height: 40 }
+            ];
+            
+            // Create rings
+            this.rings = [
+                { 
+                    x: this.width * 0.2, 
+                    y: this.height * 0.3, 
+                    vx: 0, 
+                    vy: 0, 
+                    radius: 12,
+                    density: 0.8, // Floats
+                    onPost: false,
+                    id: 0
+                },
+                { 
+                    x: this.width * 0.4, 
+                    y: this.height * 0.4, 
+                    vx: 0, 
+                    vy: 0, 
+                    radius: 12,
+                    density: 0.8,
+                    onPost: false,
+                    id: 1
+                },
+                { 
+                    x: this.width * 0.6, 
+                    y: this.height * 0.2, 
+                    vx: 0, 
+                    vy: 0, 
+                    radius: 12,
+                    density: 0.8,
+                    onPost: false,
+                    id: 2
+                },
+                { 
+                    x: this.width * 0.8, 
+                    y: this.height * 0.35, 
+                    vx: 0, 
+                    vy: 0, 
+                    radius: 12,
+                    density: 0.8,
+                    onPost: false,
+                    id: 3
+                }
+            ];
+        }
+        
+        initGyroscope() {
+            if (typeof DeviceOrientationEvent !== 'undefined') {
+                // Request permission for iOS 13+
                 if (typeof DeviceOrientationEvent.requestPermission === 'function') {
                     DeviceOrientationEvent.requestPermission()
                         .then(response => {
                             if (response === 'granted') {
-                                this.setupOrientationListener();
-                                this.gyroEnabled = true;
-                                statusEl.textContent = '📱 Gyro Active';
+                                this.startGyroscope();
                             } else {
-                                statusEl.textContent = '❌ Gyro Denied';
-                                this.setupFallbackControls();
+                                this.status.textContent = 'Gyroscope permission denied. Tap screen to tilt.';
+                                this.initTouchTilt();
                             }
                         })
                         .catch(() => {
-                            statusEl.textContent = '❌ Gyro Error';
-                            this.setupFallbackControls();
+                            this.status.textContent = 'Gyroscope error. Tap screen to tilt.';
+                            this.initTouchTilt();
                         });
                 } else {
-                    // Android/other devices
-                    this.setupOrientationListener();
-                    this.gyroEnabled = true;
-                    statusEl.textContent = '📱 Gyro Active';
+                    // Android or older iOS
+                    this.startGyroscope();
                 }
             } else {
-                statusEl.textContent = '❌ No Gyro';
-                this.setupFallbackControls();
+                this.status.textContent = 'No gyroscope. Tap screen to tilt.';
+                this.initTouchTilt();
             }
         }
-
-        setupOrientationListener() {
+        
+        startGyroscope() {
             window.addEventListener('deviceorientation', (event) => {
-                // Convert device orientation to tilt values
-                // Beta: front-back tilt (-180 to 180)
-                // Gamma: left-right tilt (-90 to 90)
+                // Convert device orientation to normalized tilt values
+                const beta = event.beta || 0;   // Front-back tilt
+                const gamma = event.gamma || 0; // Left-right tilt
                 
-                let beta = event.beta || 0;  // X-axis
-                let gamma = event.gamma || 0; // Y-axis
-
-                // Normalize and limit the values
-                this.tiltX = Math.max(-1, Math.min(1, gamma / 30)); // Left-right
-                this.tiltY = Math.max(-1, Math.min(1, (beta - 45) / 30)); // Forward-back (adjust for typical holding angle)
-
-                // Update physics gravity based on tilt
-                this.physics.world.gravity.x = this.tiltX * 300;
-                this.physics.world.gravity.y = 400 + (this.tiltY * 200);
-
-                // Update tilt indicator
-                this.updateTiltIndicator();
-                this.updateWaterSurface();
+                // Normalize to -1 to 1 range
+                this.tiltX = Math.max(-1, Math.min(1, gamma / 45));
+                this.tiltY = Math.max(-1, Math.min(1, (beta - 90) / 45));
+                
+                this.status.textContent = `Tilt: ${this.tiltX.toFixed(2)}, ${this.tiltY.toFixed(2)} | Score: ${this.getScore()}/4`;
             });
+            
+            this.status.textContent = 'Gyroscope active! Tilt phone to play.';
         }
-
-        setupFallbackControls() {
-            // Touch controls for devices without gyro
+        
+        initTouchTilt() {
             let isDragging = false;
             let lastTouch = { x: 0, y: 0 };
-
-            this.input.on('pointerdown', (pointer) => {
+            
+            this.canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
                 isDragging = true;
-                lastTouch = { x: pointer.x, y: pointer.y };
+                const touch = e.touches[0];
+                lastTouch = { x: touch.clientX, y: touch.clientY };
             });
-
-            this.input.on('pointermove', (pointer) => {
+            
+            this.canvas.addEventListener('touchmove', (e) => {
+                e.preventDefault();
                 if (isDragging) {
-                    const deltaX = (pointer.x - lastTouch.x) / 100;
-                    const deltaY = (pointer.y - lastTouch.y) / 100;
+                    const touch = e.touches[0];
+                    const deltaX = (touch.clientX - lastTouch.x) / 100;
+                    const deltaY = (touch.clientY - lastTouch.y) / 100;
                     
                     this.tiltX = Math.max(-1, Math.min(1, this.tiltX + deltaX));
                     this.tiltY = Math.max(-1, Math.min(1, this.tiltY + deltaY));
-
-                    this.physics.world.gravity.x = this.tiltX * 300;
-                    this.physics.world.gravity.y = 400 + (this.tiltY * 200);
-
-                    this.updateTiltIndicator();
-                    this.updateWaterSurface();
                     
-                    lastTouch = { x: pointer.x, y: pointer.y };
+                    lastTouch = { x: touch.clientX, y: touch.clientY };
                 }
             });
-
-            this.input.on('pointerup', () => {
+            
+            this.canvas.addEventListener('touchend', () => {
                 isDragging = false;
             });
         }
-
-        updateTiltIndicator() {
-            const dot = document.getElementById('tiltDot');
-            if (dot) {
-                const translateX = this.tiltX * 20;
-                const translateY = this.tiltY * 20;
-                dot.style.transform = `translate(${translateX}px, ${translateY}px)`;
-            }
-        }
-
-        updateWaterSurface() {
-            this.waterSurface.clear();
-            this.waterSurface.lineStyle(3, 0x87ceeb, 0.6);
+        
+        initControls() {
+            const button = document.getElementById('waterButton');
             
-            // Create wavy water surface that responds to tilt
-            const surfaceY = this.gameHeight - 80;
-            const waveAmplitude = 5 + Math.abs(this.tiltX) * 10;
-            const waveOffset = this.tiltX * 20;
+            const startPressure = () => {
+                this.waterPressure = true;
+                button.style.transform = 'translateY(3px) scale(0.95)';
+            };
             
-            this.waterSurface.beginPath();
-            for (let x = 0; x <= this.gameWidth; x += 10) {
-                const wave = Math.sin((x + waveOffset) * 0.02) * waveAmplitude;
-                const y = surfaceY + wave + (this.tiltX * (x - this.gameWidth/2) * 0.1);
-                
-                if (x === 0) {
-                    this.waterSurface.moveTo(x, y);
-                } else {
-                    this.waterSurface.lineTo(x, y);
-                }
-            }
-            this.waterSurface.strokePath();
-        }
-
-        setupCollisions() {
-            // Ring collisions
-            this.rings.forEach(ring => {
-                this.physics.add.collider(ring, this.physics.world.bounds);
+            const stopPressure = () => {
+                this.waterPressure = false;
+                button.style.transform = '';
+            };
+            
+            button.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                startPressure();
             });
-
-            // Ring to ring collisions
+            
+            button.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                stopPressure();
+            });
+            
+            button.addEventListener('mousedown', startPressure);
+            button.addEventListener('mouseup', stopPressure);
+            button.addEventListener('mouseleave', stopPressure);
+        }
+        
+        updatePhysics() {
+            // Update rings with real physics
+            this.rings.forEach(ring => {
+                // Apply gravity based on device tilt
+                const gravityX = this.tiltX * this.gravity;
+                const gravityY = this.gravity + (this.tiltY * this.gravity);
+                
+                // Water level (assume water fills bottom 80% of container)
+                const waterLevel = this.height * 0.8;
+                const isInWater = ring.y > waterLevel - ring.radius;
+                
+                if (isInWater) {
+                    // Buoyancy force (upward)
+                    const submergedRatio = Math.min(1, (ring.y - (waterLevel - ring.radius)) / (ring.radius * 2));
+                    const buoyancyForce = this.buoyancy * submergedRatio;
+                    
+                    // Apply buoyancy (opposes gravity)
+                    ring.vy -= buoyancyForce;
+                    
+                    // Water resistance
+                    ring.vx *= 0.85;
+                    ring.vy *= 0.9;
+                    
+                    // Density affects how much it floats
+                    if (ring.density < 1.0) {
+                        ring.vy -= (1.0 - ring.density) * 0.1;
+                    }
+                }
+                
+                // Apply gravity
+                ring.vx += gravityX;
+                ring.vy += gravityY;
+                
+                // Water pressure effect
+                if (this.waterPressure && isInWater) {
+                    const pressureX = this.width / 2;
+                    const pressureY = this.height - 20;
+                    const dx = ring.x - pressureX;
+                    const dy = ring.y - pressureY;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < 80) {
+                        const force = (80 - distance) / 80 * 0.8;
+                        const angle = Math.atan2(dy, dx);
+                        ring.vx += Math.cos(angle) * force;
+                        ring.vy += Math.sin(angle) * force;
+                        
+                        // Create bubbles
+                        if (Math.random() < 0.3) {
+                            this.waterParticles.push({
+                                x: pressureX + (Math.random() - 0.5) * 40,
+                                y: pressureY + (Math.random() - 0.5) * 20,
+                                vx: (Math.random() - 0.5) * 4,
+                                vy: -Math.random() * 8,
+                                life: 1.0,
+                                radius: Math.random() * 3 + 1
+                            });
+                        }
+                    }
+                }
+                
+                // Update position
+                ring.x += ring.vx;
+                ring.y += ring.vy;
+                
+                // Boundary collisions with realistic bounce
+                if (ring.x - ring.radius < 0) {
+                    ring.x = ring.radius;
+                    ring.vx *= -0.6;
+                }
+                if (ring.x + ring.radius > this.width) {
+                    ring.x = this.width - ring.radius;
+                    ring.vx *= -0.6;
+                }
+                if (ring.y - ring.radius < 0) {
+                    ring.y = ring.radius;
+                    ring.vy *= -0.4;
+                }
+                if (ring.y + ring.radius > this.height) {
+                    ring.y = this.height - ring.radius;
+                    ring.vy *= -0.4;
+                    ring.vx *= 0.9; // Floor friction
+                }
+            });
+            
+            // Update water particles
+            this.waterParticles = this.waterParticles.filter(particle => {
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+                particle.vy += 0.2; // Gravity on bubbles
+                particle.life -= 0.02;
+                return particle.life > 0 && particle.y > 0;
+            });
+            
+            // Ring-ring collisions
             for (let i = 0; i < this.rings.length; i++) {
                 for (let j = i + 1; j < this.rings.length; j++) {
-                    this.physics.add.collider(this.rings[i], this.rings[j]);
-                }
-            }
-        }
-
-        applyWaterPressure() {
-            if (!this.waterPressureActive) return;
-
-            // Apply upward force to rings near the pressure point
-            const pressureX = this.gameWidth / 2;
-            const pressureY = this.gameHeight - 60;
-            const range = 80;
-
-            this.rings.forEach(ring => {
-                const distance = Phaser.Math.Distance.Between(pressureX, pressureY, ring.x, ring.y);
-                
-                if (distance < range) {
-                    const force = (range - distance) / range * 400;
-                    const angle = Phaser.Math.Angle.Between(pressureX, pressureY, ring.x, ring.y);
+                    const ring1 = this.rings[i];
+                    const ring2 = this.rings[j];
+                    const dx = ring2.x - ring1.x;
+                    const dy = ring2.y - ring1.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    const minDistance = ring1.radius + ring2.radius;
                     
-                    ring.body.velocity.x += Math.cos(angle) * force * 0.5;
-                    ring.body.velocity.y += Math.sin(angle) * force;
+                    if (distance < minDistance) {
+                        // Collision response
+                        const angle = Math.atan2(dy, dx);
+                        const sin = Math.sin(angle);
+                        const cos = Math.cos(angle);
+                        
+                        // Separate rings
+                        const overlap = minDistance - distance;
+                        ring1.x -= cos * overlap * 0.5;
+                        ring1.y -= sin * overlap * 0.5;
+                        ring2.x += cos * overlap * 0.5;
+                        ring2.y += sin * overlap * 0.5;
+                        
+                        // Exchange velocities (simplified)
+                        const v1 = ring1.vx * cos + ring1.vy * sin;
+                        const v2 = ring2.vx * cos + ring2.vy * sin;
+                        ring1.vx += (v2 - v1) * cos * 0.8;
+                        ring1.vy += (v2 - v1) * sin * 0.8;
+                        ring2.vx += (v1 - v2) * cos * 0.8;
+                        ring2.vy += (v1 - v2) * sin * 0.8;
+                    }
                 }
-            });
-        }
-
-        applyWaterResistance() {
-            // Simulate water resistance
-            this.rings.forEach(ring => {
-                ring.body.velocity.x *= 0.98;
-                ring.body.velocity.y *= 0.99;
-            });
-        }
-
-        update() {
-            if (this.waterPressureActive) {
-                this.applyWaterPressure();
             }
             
-            this.checkScoring();
-        }
-
-        checkScoring() {
-            let ringsOnPosts = 0;
-            
+            // Check scoring
             this.rings.forEach(ring => {
-                let isOnPost = false;
+                ring.onPost = false;
                 this.posts.forEach(post => {
-                    const distance = Phaser.Math.Distance.Between(ring.x, ring.y, post.x, post.y - 25);
-                    if (distance < 25) {
-                        isOnPost = true;
+                    if (ring.x > post.x - post.width/2 - ring.radius &&
+                        ring.x < post.x + post.width/2 + ring.radius &&
+                        ring.y > post.y - post.height &&
+                        ring.y < post.y + ring.radius) {
+                        ring.onPost = true;
                     }
                 });
-                
-                if (isOnPost) {
-                    ringsOnPosts++;
-                    ring.setTint(0x00ff88);
-                } else {
-                    ring.clearTint();
-                }
             });
-
-            if (ringsOnPosts !== this.score) {
-                this.score = ringsOnPosts;
-                document.getElementById('score').textContent = this.score;
-                
-                if (this.score === this.rings.length) {
-                    this.celebrateWin();
-                }
-            }
         }
-
-        celebrateWin() {
-            this.add.text(this.gameWidth/2, this.gameHeight/2, 'PERFECT!\nAll rings scored!', {
-                fontSize: '28px',
-                fill: '#ffff00',
-                align: 'center',
-                stroke: '#000',
-                strokeThickness: 3
-            }).setOrigin(0.5);
-
-            // Victory confetti
-            this.add.particles(this.gameWidth/2, this.gameHeight/2, 'bubble', {
-                speed: { min: 100, max: 300 },
-                scale: { start: 1, end: 0 },
-                blendMode: 'ADD',
-                lifespan: 2000,
-                quantity: 50
+        
+        getScore() {
+            return this.rings.filter(ring => ring.onPost).length;
+        }
+        
+        render() {
+            // Clear canvas
+            this.ctx.fillStyle = '#4682b4';
+            this.ctx.fillRect(0, 0, this.width, this.height);
+            
+            // Draw water
+            const waterLevel = this.height * 0.8;
+            this.ctx.fillStyle = 'rgba(135, 206, 235, 0.6)';
+            this.ctx.fillRect(0, waterLevel, this.width, this.height - waterLevel);
+            
+            // Draw water surface with tilt effect
+            this.ctx.strokeStyle = '#87ceeb';
+            this.ctx.lineWidth = 2;
+            this.ctx.beginPath();
+            const tiltOffset = this.tiltX * 10;
+            this.ctx.moveTo(0, waterLevel + tiltOffset);
+            this.ctx.lineTo(this.width, waterLevel - tiltOffset);
+            this.ctx.stroke();
+            
+            // Draw posts
+            this.ctx.fillStyle = '#4ecdc4';
+            this.posts.forEach(post => {
+                this.ctx.fillRect(
+                    post.x - post.width/2, 
+                    post.y - post.height, 
+                    post.width, 
+                    post.height
+                );
             });
-
-            this.time.delayedCall(3000, () => {
-                this.scene.restart();
+            
+            // Draw water particles
+            this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            this.waterParticles.forEach(particle => {
+                this.ctx.globalAlpha = particle.life;
+                this.ctx.beginPath();
+                this.ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
+                this.ctx.fill();
             });
+            this.ctx.globalAlpha = 1;
+            
+            // Draw rings
+            this.rings.forEach(ring => {
+                this.ctx.fillStyle = ring.onPost ? '#00ff88' : '#ff6b6b';
+                this.ctx.strokeStyle = '#fff';
+                this.ctx.lineWidth = 2;
+                this.ctx.beginPath();
+                this.ctx.arc(ring.x, ring.y, ring.radius, 0, Math.PI * 2);
+                this.ctx.fill();
+                this.ctx.stroke();
+                
+                // Inner circle
+                this.ctx.fillStyle = ring.onPost ? '#004444' : '#880000';
+                this.ctx.beginPath();
+                this.ctx.arc(ring.x, ring.y, ring.radius * 0.4, 0, Math.PI * 2);
+                this.ctx.fill();
+            });
+        }
+        
+        gameLoop() {
+            this.updatePhysics();
+            this.render();
+            
+            // Update status
+            if (this.status.textContent.includes('Tilt:')) {
+                this.status.textContent = `Tilt: ${this.tiltX.toFixed(2)}, ${this.tiltY.toFixed(2)} | Score: ${this.getScore()}/4`;
+            }
+            
+            requestAnimationFrame(() => this.gameLoop());
         }
     }
-
-    // Game configuration
-    const config = {
-        type: Phaser.AUTO,
-        width: 320,
-        height: 480,
-        parent: 'game',
-        backgroundColor: '#4682b4',
-        physics: {
-            default: 'arcade',
-            arcade: {
-                gravity: { y: 400 },
-                debug: false
-            }
-        },
-        scene: WaterfulGame,
-        scale: {
-            mode: Phaser.Scale.FIT,
-            autoCenter: Phaser.Scale.CENTER_BOTH
-        }
-    };
-
-    // Start the game
-    const game = new Phaser.Game(config);
-
+    
+    // Start game when page loads
+    window.addEventListener('load', () => {
+        new WaterfulGame();
+    });
+    
     // Prevent page scrolling
     document.addEventListener('touchmove', (e) => {
         e.preventDefault();
     }, { passive: false });
-
-    // Handle orientation changes
-    window.addEventListener('orientationchange', () => {
-        setTimeout(() => {
-            game.scale.refresh();
-        }, 100);
-    });
 </script>
 ```
 
