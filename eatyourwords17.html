@@ -1,0 +1,1559 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Eat Your Words v17 - Word Collection Game</title>
+    <style>
+        :root {
+            --primary: #1BB295;
+            --secondary: #FF6B6B;
+            --accent: #4ECDC4;
+            --background: #F8F9FA;
+            --text: #2C3E50;
+            --success: #51CF66;
+            --warning: #FFB366;
+            --grid: #E9ECEF;
+            --shadow: rgba(0, 0, 0, 0.1);
+        }
+
+```
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: linear-gradient(135deg, var(--background) 0%, #E8F4F8 100%);
+        color: var(--text);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        margin: 0;
+        padding: 10px;
+    }
+
+    #gameContainer {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 8px 32px var(--shadow);
+        padding: 24px;
+        max-width: 700px;
+        width: 100%;
+        margin: 0 auto;
+        backdrop-filter: blur(10px);
+    }
+
+    #gameCanvas {
+        border: 2px solid var(--grid);
+        border-radius: 12px;
+        display: block;
+        margin: 0 auto;
+        cursor: pointer;
+        touch-action: none;
+        max-width: 100%;
+        height: auto;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    }
+
+    .hidden {
+        display: none !important;
+    }
+
+    .game-state {
+        text-align: center;
+        padding: 40px 20px;
+    }
+
+    h1 {
+        color: var(--primary);
+        font-size: 2.8em;
+        margin-bottom: 16px;
+        font-weight: 800;
+        background: linear-gradient(135deg, var(--primary), var(--accent));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    h2 {
+        color: var(--text);
+        font-size: 2em;
+        margin-bottom: 16px;
+        font-weight: 600;
+    }
+
+    .subtitle {
+        font-size: 1.3em;
+        color: #6C757D;
+        margin-bottom: 30px;
+        line-height: 1.4;
+    }
+
+    .btn {
+        background: linear-gradient(135deg, var(--primary), var(--accent));
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 14px 36px;
+        font-size: 1.1em;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin: 8px;
+        box-shadow: 0 4px 16px rgba(27, 178, 149, 0.3);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .btn:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 24px rgba(27, 178, 149, 0.4);
+    }
+
+    .btn:active {
+        transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+        background: linear-gradient(135deg, var(--secondary), #FF8E8E);
+        box-shadow: 0 4px 16px rgba(255, 107, 107, 0.3);
+    }
+
+    .btn-secondary:hover {
+        box-shadow: 0 8px 24px rgba(255, 107, 107, 0.4);
+    }
+
+    .btn-warning {
+        background: linear-gradient(135deg, var(--warning), #FFD93D);
+        box-shadow: 0 4px 16px rgba(255, 179, 102, 0.3);
+    }
+
+    /* Game HUD */
+    #gameHUD {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 12px;
+        margin-bottom: 20px;
+        font-size: 1.1em;
+        font-weight: 600;
+    }
+
+    .hud-item {
+        background: linear-gradient(135deg, var(--background), #E8F4F8);
+        padding: 12px 16px;
+        border-radius: 10px;
+        border: 2px solid var(--grid);
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+
+    .hud-item.highlight {
+        border-color: var(--primary);
+        background: linear-gradient(135deg, var(--primary), var(--accent));
+        color: white;
+        transform: scale(1.05);
+    }
+
+    /* Round Progress */
+    .round-info {
+        background: linear-gradient(135deg, var(--primary), var(--accent));
+        color: white;
+        padding: 16px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        text-align: center;
+    }
+
+    .round-title {
+        font-size: 1.4em;
+        font-weight: 700;
+        margin-bottom: 8px;
+    }
+
+    .round-goal {
+        font-size: 1em;
+        opacity: 0.9;
+    }
+
+    /* Phase Transition */
+    .phase-transition {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, var(--primary), var(--accent));
+        color: white;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.5s ease;
+    }
+
+    .phase-transition.show {
+        opacity: 1;
+        pointer-events: all;
+    }
+
+    .phase-transition h2 {
+        color: white;
+        font-size: 3em;
+        margin-bottom: 16px;
+        animation: slideInUp 0.8s ease;
+    }
+
+    .phase-transition p {
+        font-size: 1.4em;
+        text-align: center;
+        max-width: 600px;
+        animation: slideInUp 0.8s ease 0.2s both;
+    }
+
+    @keyframes slideInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Word Phase Styles */
+    #wordPhase {
+        text-align: center;
+        padding: 20px;
+    }
+
+    #letterBank {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 10px;
+        margin: 24px 0;
+        min-height: 140px;
+        background: linear-gradient(135deg, var(--background), #E8F4F8);
+        padding: 20px;
+        border-radius: 12px;
+        border: 2px solid var(--grid);
+    }
+
+    .letter-tile {
+        width: 52px;
+        height: 52px;
+        background: white;
+        border: 3px solid var(--primary);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.6em;
+        font-weight: 800;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        user-select: none;
+        position: relative;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .letter-tile:hover:not(.used) {
+        background: var(--primary);
+        color: white;
+        transform: scale(1.1) rotate(5deg);
+        box-shadow: 0 8px 20px rgba(27, 178, 149, 0.4);
+    }
+
+    .letter-tile.used {
+        opacity: 0.4;
+        cursor: not-allowed;
+        transform: scale(0.9);
+        border-color: var(--grid);
+    }
+
+    .letter-points {
+        position: absolute;
+        bottom: 3px;
+        right: 5px;
+        font-size: 0.7em;
+        color: var(--text);
+        font-weight: 600;
+    }
+
+    #currentWord {
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+        margin: 24px 0;
+        min-height: 70px;
+    }
+
+    .word-slot {
+        width: 60px;
+        height: 60px;
+        background: white;
+        border: 4px solid var(--text);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.8em;
+        font-weight: 800;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .word-slot.filled {
+        background: var(--success);
+        color: white;
+        border-color: var(--success);
+        transform: scale(1.05);
+    }
+
+    #wordActions {
+        display: flex;
+        justify-content: center;
+        gap: 16px;
+        margin: 24px 0;
+    }
+
+    #foundWords {
+        background: linear-gradient(135deg, var(--background), #E8F4F8);
+        border-radius: 12px;
+        padding: 20px;
+        margin-top: 24px;
+        max-height: 250px;
+        overflow-y: auto;
+        border: 2px solid var(--grid);
+    }
+
+    .found-word {
+        display: inline-block;
+        background: white;
+        padding: 8px 16px;
+        margin: 6px;
+        border-radius: 8px;
+        font-weight: 700;
+        border: 2px solid var(--success);
+        color: var(--success);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        transition: all 0.2s ease;
+    }
+
+    .found-word:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(81, 207, 102, 0.3);
+    }
+
+    .points {
+        color: var(--primary);
+        font-size: 0.9em;
+        margin-left: 6px;
+    }
+
+    /* Timer styles */
+    .timer-warning {
+        color: var(--warning) !important;
+        animation: pulse 1s infinite;
+    }
+
+    .timer-danger {
+        color: var(--secondary) !important;
+        animation: pulse 0.5s infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.6; }
+    }
+
+    /* Score popup animation */
+    @keyframes scorePopup {
+        0% {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+        }
+        100% {
+            transform: translateY(-40px) scale(1.5);
+            opacity: 0;
+        }
+    }
+
+    .score-popup {
+        position: fixed;
+        color: var(--success);
+        font-weight: 800;
+        font-size: 1.6em;
+        pointer-events: none;
+        animation: scorePopup 1.2s ease-out forwards;
+        z-index: 1000;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    /* Mobile responsive */
+    @media (max-width: 600px) {
+        #gameContainer {
+            padding: 16px;
+            margin: 8px;
+        }
+
+        h1 {
+            font-size: 2.2em;
+        }
+
+        .letter-tile {
+            width: 44px;
+            height: 44px;
+            font-size: 1.4em;
+        }
+
+        .word-slot {
+            width: 52px;
+            height: 52px;
+            font-size: 1.6em;
+        }
+
+        #gameHUD {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+    }
+
+    /* Game over stats */
+    .game-stats {
+        background: linear-gradient(135deg, var(--background), #E8F4F8);
+        border-radius: 12px;
+        padding: 20px;
+        margin: 20px 0;
+        border: 2px solid var(--grid);
+    }
+
+    .stat-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--grid);
+    }
+
+    .stat-item:last-child {
+        border-bottom: none;
+    }
+
+    .stat-value {
+        font-weight: 700;
+        color: var(--primary);
+    }
+</style>
+```
+
+</head>
+<body>
+    <div id="gameContainer">
+        <!-- Menu State -->
+        <div id="menuState" class="game-state">
+            <h1>🐍 Eat Your Words</h1>
+            <p class="subtitle">
+                Snake meets Scrabble! Collect letters, build words, advance through rounds.
+            </p>
+            <div style="background: linear-gradient(135deg, var(--background), #E8F4F8); padding: 20px; border-radius: 12px; margin: 20px 0; border: 2px solid var(--grid);">
+                <h3 style="color: var(--primary); margin-bottom: 12px;">🎯 How to Play</h3>
+                <p style="text-align: left; line-height: 1.6;">
+                    <strong>Collection Phase:</strong> Control the snake to collect letters<br>
+                    <strong>Word Phase:</strong> Build words from collected letters<br>
+                    <strong>Goal:</strong> Meet the round target to advance!
+                </p>
+            </div>
+            <button class="btn" onclick="startGame()">Start Adventure</button>
+        </div>
+
+```
+    <!-- Snake Phase -->
+    <div id="snakePhase" class="hidden">
+        <div class="round-info">
+            <div class="round-title">Round <span id="currentRound">1</span></div>
+            <div class="round-goal">Target: <span id="roundTarget">500</span> points</div>
+        </div>
+        
+        <div id="gameHUD">
+            <div class="hud-item">
+                <div>Score</div>
+                <div id="score">0</div>
+            </div>
+            <div class="hud-item">
+                <div>Letters</div>
+                <div id="letterCount">0</div>
+            </div>
+            <div class="hud-item">
+                <div>Time</div>
+                <div id="timer">30</div>
+            </div>
+            <div class="hud-item">
+                <div>Round Target</div>
+                <div id="targetDisplay">500</div>
+            </div>
+        </div>
+        
+        <canvas id="gameCanvas" width="400" height="400"></canvas>
+        
+        <p style="text-align: center; margin-top: 12px; color: #6C757D; font-size: 0.95em;">
+            🎮 Arrow keys, WASD, or swipe to move • Avoid walls and yourself!
+        </p>
+    </div>
+
+    <!-- Word Building Phase -->
+    <div id="wordPhase" class="hidden">
+        <div class="round-info">
+            <div class="round-title">Build Your Words!</div>
+            <div class="round-goal">Make <span id="wordPhaseTarget">300</span> more points to advance</div>
+        </div>
+        
+        <div style="display: flex; justify-content: space-between; margin-bottom: 16px; font-size: 1.1em; font-weight: 600;">
+            <div>Score: <span id="wordScore" style="color: var(--primary);">0</span></div>
+            <div>Words: <span id="wordsFoundCount" style="color: var(--success);">0</span></div>
+            <div>Time: <span id="wordTimer" style="color: var(--secondary);">60</span>s</div>
+        </div>
+        
+        <p style="color: #6C757D; margin-bottom: 16px;">
+            Click letters to spell words (3-5 letters) • Points = letters + length bonus
+        </p>
+        
+        <div id="letterBank"></div>
+        <div id="currentWord"></div>
+        
+        <div id="wordActions">
+            <button class="btn btn-secondary" onclick="clearWord()">Clear Word</button>
+            <button class="btn" onclick="submitWord()">Submit Word</button>
+            <button class="btn btn-warning" onclick="finishWordPhase()">Finish Phase</button>
+        </div>
+        
+        <div id="foundWords">
+            <h3 style="margin-bottom: 12px; color: var(--text);">Words Found</h3>
+            <div id="wordsList"></div>
+        </div>
+    </div>
+
+    <!-- Game Over State -->
+    <div id="gameOverState" class="game-state hidden">
+        <h1>🎉 Game Complete!</h1>
+        <h2 style="color: var(--primary); margin: 20px 0;">
+            Final Score: <span id="finalScore">0</span>
+        </h2>
+        
+        <div class="game-stats">
+            <div class="stat-item">
+                <span>Rounds Completed:</span>
+                <span class="stat-value" id="roundsCompleted">0</span>
+            </div>
+            <div class="stat-item">
+                <span>Total Words Found:</span>
+                <span class="stat-value" id="totalWordsFound">0</span>
+            </div>
+            <div class="stat-item">
+                <span>Letters Collected:</span>
+                <span class="stat-value" id="totalLettersCollected">0</span>
+            </div>
+            <div class="stat-item">
+                <span>Best Word:</span>
+                <span class="stat-value" id="bestWord">---</span>
+            </div>
+        </div>
+        
+        <button class="btn" onclick="resetGame()">Play Again</button>
+    </div>
+
+    <!-- Phase Transition Overlay -->
+    <div id="phaseTransition" class="phase-transition">
+        <h2 id="transitionTitle">Ready?</h2>
+        <p id="transitionMessage">Get ready for the next phase!</p>
+    </div>
+</div>
+
+<script>
+    // Enhanced Game Configuration
+    const CONFIG = {
+        GRID_SIZE: 20,
+        CELL_SIZE: 20,
+        BASE_SNAKE_SPEED: 150,
+        BASE_COLLECTION_TIME: 35,
+        BASE_WORD_TIME: 60,
+        BASE_TARGET_SCORE: 500,
+        LETTER_COUNT: 6,
+        
+        // Progression settings
+        SPEED_INCREASE_PER_ROUND: 15,
+        TIME_DECREASE_PER_ROUND: 3,
+        TARGET_INCREASE_PER_ROUND: 300,
+        
+        LETTER_FREQUENCIES: {
+            'E': 12.70, 'T': 9.06, 'A': 8.17, 'O': 7.51, 'I': 6.97,
+            'N': 6.75, 'S': 6.33, 'H': 6.09, 'R': 5.99, 'D': 4.25,
+            'L': 4.03, 'C': 2.78, 'U': 2.76, 'M': 2.41, 'W': 2.36,
+            'F': 2.23, 'G': 2.02, 'Y': 1.97, 'P': 1.93, 'B': 1.29,
+            'V': 0.98, 'K': 0.77, 'J': 0.15, 'X': 0.15, 'Q': 0.10,
+            'Z': 0.07
+        },
+        
+        LETTER_POINTS: {
+            'E': 1, 'A': 1, 'I': 1, 'O': 1, 'U': 1, 'L': 1, 'N': 1, 'S': 1, 'T': 1, 'R': 1,
+            'D': 2, 'G': 2,
+            'B': 3, 'C': 3, 'M': 3, 'P': 3,
+            'F': 4, 'H': 4, 'V': 4, 'W': 4, 'Y': 4,
+            'K': 5,
+            'J': 8, 'X': 8,
+            'Q': 10, 'Z': 10
+        }
+    };
+
+    // Comprehensive dictionary
+    const GAME_DICTIONARY = new Set([
+        // 3-letter words (selection for brevity)
+        'ACE', 'ACT', 'ADD', 'AGE', 'AID', 'AIM', 'AIR', 'ALL', 'AND', 'ANT', 'ANY', 'APE', 'ARC',
+        'ARE', 'ARK', 'ARM', 'ART', 'ASH', 'ASK', 'ATE', 'AWE', 'AXE', 'BAD', 'BAG', 'BAR', 'BAT',
+        'BAY', 'BED', 'BEE', 'BET', 'BIG', 'BIT', 'BOW', 'BOX', 'BOY', 'BUD', 'BUG', 'BUS', 'BUT',
+        'BUY', 'CAB', 'CAN', 'CAP', 'CAR', 'CAT', 'COB', 'COD', 'COG', 'COT', 'COW', 'CRY', 'CUB',
+        'CUP', 'CUT', 'DAD', 'DAM', 'DAY', 'DEN', 'DEW', 'DID', 'DIG', 'DIM', 'DOC', 'DOG', 'DOT',
+        'DRY', 'DUB', 'DUE', 'DUG', 'EAR', 'EAT', 'EEL', 'EGG', 'ELF', 'ELK', 'ELM', 'END', 'ERA',
+        'EVE', 'EYE', 'FAD', 'FAN', 'FAR', 'FAT', 'FAX', 'FED', 'FEW', 'FIG', 'FIN', 'FIR', 'FIT',
+        'FIX', 'FLU', 'FLY', 'FOE', 'FOG', 'FOR', 'FOX', 'FRY', 'FUN', 'FUR', 'GAP', 'GAS', 'GAY',
+        'GEL', 'GET', 'GIG', 'GIN', 'GOD', 'GOT', 'GUM', 'GUN', 'GUT', 'GUY', 'GYM', 'HAD', 'HAM',
+        'HAS', 'HAT', 'HAY', 'HEN', 'HER', 'HEX', 'HEY', 'HID', 'HIM', 'HIS', 'HIT', 'HOG', 'HOP',
+        'HOT', 'HOW', 'HUB', 'HUG', 'HUM', 'HUT', 'ICE', 'ICY', 'ILL', 'IMP', 'INK', 'INN', 'ION',
+        'ITS', 'IVY', 'JAB', 'JAG', 'JAM', 'JAR', 'JAW', 'JAY', 'JET', 'JIG', 'JOB', 'JOG', 'JOT',
+        'JOY', 'JUG', 'KEG', 'KEN', 'KEY', 'KID', 'KIN', 'KIT', 'LAB', 'LAC', 'LAD', 'LAG', 'LAP',
+        'LAW', 'LAX', 'LAY', 'LEA', 'LED', 'LEG', 'LET', 'LID', 'LIE', 'LIP', 'LIT', 'LOG', 'LOT',
+        'LOW', 'LUG', 'MAC', 'MAD', 'MAN', 'MAP', 'MAT', 'MAX', 'MAY', 'MEN', 'MET', 'MID', 'MIX',
+        'MOB', 'MOD', 'MOM', 'MOP', 'MOW', 'MUD', 'MUG', 'NAG', 'NAP', 'NET', 'NEW', 'NIL', 'NIT',
+        'NOD', 'NOR', 'NOT', 'NOW', 'NUN', 'NUT', 'OAK', 'OAR', 'OAT', 'ODD', 'ODE', 'OFF', 'OIL',
+        'OLD', 'ONE', 'OPT', 'ORB', 'ORE', 'OUR', 'OUT', 'OWE', 'OWL', 'OWN', 'PAD', 'PAL', 'PAN',
+        'PAT', 'PAW', 'PAX', 'PAY', 'PEA', 'PEG', 'PEN', 'PEP', 'PER', 'PET', 'PIE', 'PIG', 'PIN',
+        'PIT', 'PLY', 'POD', 'POP', 'POT', 'PRO', 'PRY', 'PUB', 'PUG', 'PUN', 'PUP', 'PUS', 'PUT',
+        'RAG', 'RAM', 'RAN', 'RAP', 'RAT', 'RAW', 'RAY', 'RED', 'REP', 'RIB', 'RID', 'RIG', 'RIM',
+        'RIP', 'ROB', 'ROD', 'ROE', 'ROT', 'ROW', 'RUB', 'RUG', 'RUM', 'RUN', 'RUT', 'RYE', 'SAC',
+        'SAD', 'SAG', 'SAP', 'SAT', 'SAW', 'SAX', 'SAY', 'SEA', 'SEE', 'SET', 'SEW', 'SEX', 'SHE',
+        'SHY', 'SIN', 'SIP', 'SIR', 'SIS', 'SIT', 'SIX', 'SKI', 'SKY', 'SLY', 'SOB', 'SOD', 'SON',
+        'SOP', 'SOT', 'SOW', 'SOX', 'SOY', 'SPA', 'SPY', 'STY', 'SUB', 'SUM', 'SUN', 'SUP', 'TAB',
+        'TAD', 'TAG', 'TAN', 'TAP', 'TAR', 'TAT', 'TAX', 'TEA', 'TEN', 'THE', 'TIC', 'TIE', 'TIN',
+        'TIP', 'TOE', 'TON', 'TOO', 'TOP', 'TOT', 'TOW', 'TOY', 'TRY', 'TUB', 'TUG', 'TWO', 'URN',
+        'USE', 'VAN', 'VAT', 'VET', 'VIA', 'VIE', 'VOW', 'WAD', 'WAG', 'WAR', 'WAS', 'WAX', 'WAY',
+        'WEB', 'WED', 'WEE', 'WET', 'WHO', 'WHY', 'WIG', 'WIN', 'WIT', 'WOE', 'WOK', 'WON', 'WOO',
+        'WOW', 'YAK', 'YAM', 'YAP', 'YEA', 'YEN', 'YES', 'YET', 'YEW', 'YIN', 'YOU', 'YOW', 'ZAG',
+        'ZAP', 'ZEN', 'ZIG', 'ZIP', 'ZIT', 'ZOO',
+        
+        // 4-letter words (selection)
+        'ABLE', 'ACHE', 'ACID', 'AGED', 'AIDE', 'AIRY', 'ALLY', 'ALSO', 'AMID', 'ANTE', 'APEX', 'ARCH',
+        'AREA', 'ARMY', 'ATOM', 'AUNT', 'AUTO', 'AWAY', 'BABY', 'BACK', 'BAIL', 'BAIT', 'BAKE', 'BALD',
+        'BALL', 'BAND', 'BANG', 'BANK', 'BARE', 'BARK', 'BARN', 'BASE', 'BASH', 'BATH', 'BEAD', 'BEAK',
+        'BEAM', 'BEAN', 'BEAR', 'BEAT', 'BEEN', 'BEER', 'BEET', 'BELL', 'BELT', 'BEND', 'BENT', 'BEST',
+        'BIAS', 'BIKE', 'BILL', 'BIND', 'BIRD', 'BITE', 'BLOW', 'BLUE', 'BLUR', 'BOAR', 'BOAT', 'BODY',
+        'BOIL', 'BOLD', 'BOLT', 'BOMB', 'BOND', 'BONE', 'BOOK', 'BOOM', 'BOOT', 'BORE', 'BORN', 'BOSS',
+        'BOTH', 'BOWL', 'BRAG', 'BRAN', 'BRAT', 'BREW', 'BRIM', 'BROW', 'BUCK', 'BULB', 'BULK', 'BULL',
+        'BUMP', 'BUNK', 'BURN', 'BURP', 'BURY', 'BUSH', 'BUST', 'BUSY', 'BUZZ', 'CAFE', 'CAGE', 'CAKE',
+        'CALF', 'CALL', 'CALM', 'CAME', 'CAMP', 'CANE', 'CAPE', 'CARD', 'CARE', 'CARP', 'CART', 'CASE',
+        'CASH', 'CAST', 'CAVE', 'CELL', 'CENT', 'CHAP', 'CHAR', 'CHAT', 'CHEF', 'CHEW', 'CHIN', 'CHIP',
+        'CHOP', 'CHUM', 'CITE', 'CITY', 'CLAD', 'CLAM', 'CLAN', 'CLAP', 'CLAW', 'CLAY', 'CLIP', 'CLOD',
+        'CLOG', 'CLUB', 'CLUE', 'COAL', 'COAT', 'CODE', 'COIL', 'COIN', 'COLD', 'COLT', 'COMA', 'COMB',
+        'COME', 'CONE', 'COOK', 'COOL', 'COPE', 'COPY', 'CORD', 'CORE', 'CORK', 'CORN', 'COST', 'COUP',
+        'COVE', 'CRAB', 'CRAM', 'CREW', 'CRIB', 'CROP', 'CROW', 'CUBE', 'CUFF', 'CULT', 'CURB', 'CURE',
+        'CURL', 'CUTE', 'DAFT', 'DAME', 'DAMP', 'DARE', 'DARK', 'DARN', 'DART', 'DASH', 'DATA', 'DATE',
+        'DAWN', 'DAZE', 'DEAD', 'DEAF', 'DEAL', 'DEAN', 'DEAR', 'DEBT', 'DECK', 'DEED', 'DEEM', 'DEEP',
+        'DEER', 'DEMO', 'DENT', 'DENY', 'DESK', 'DIAL', 'DICE', 'DIED', 'DIET', 'DILL', 'DIME', 'DINE',
+        'DIRE', 'DIRT', 'DISC', 'DISH', 'DIVE', 'DOCK', 'DOER', 'DOLE', 'DOLL', 'DOME', 'DONE', 'DOOM',
+        'DOOR', 'DOPE', 'DOSE', 'DOTE', 'DOVE', 'DOWN', 'DOZE', 'DRAB', 'DRAG', 'DRAW', 'DREW', 'DRIP',
+        'DROP', 'DRUG', 'DRUM', 'DUAL', 'DUCK', 'DUCT', 'DUEL', 'DUKE', 'DULL', 'DUMB', 'DUMP', 'DUNE',
+        'DUNK', 'DUPE', 'DUSK', 'DUST', 'DUTY', 'EACH', 'EARL', 'EARN', 'EASE', 'EAST', 'EASY', 'ECHO',
+        'EDDY', 'EDGE', 'EDGY', 'EDIT', 'EMIT', 'ENVY', 'EPIC', 'EVEN', 'EVER', 'EVIL', 'EXAM', 'EXIT',
+        'EXPO', 'EYED', 'FACE', 'FACT', 'FADE', 'FAIL', 'FAIR', 'FAKE', 'FALL', 'FAME', 'FANG', 'FARE',
+        'FARM', 'FAST', 'FATE', 'FAWN', 'FEAR', 'FEAT', 'FEED', 'FEEL', 'FEET', 'FELL', 'FELT', 'FEND',
+        'FERN', 'FEST', 'FEUD', 'FIAT', 'FIEF', 'FIFE', 'FILE', 'FILL', 'FILM', 'FIND', 'FINE', 'FINK',
+        'FIRE', 'FIRM', 'FISH', 'FIST', 'FIVE', 'FLAG', 'FLAK', 'FLAP', 'FLAT', 'FLAW', 'FLAX', 'FLEA',
+        'FLED', 'FLEE', 'FLEW', 'FLEX', 'FLIP', 'FLIT', 'FLOG', 'FLOP', 'FLOW', 'FLUB', 'FLUE', 'FLUX',
+        'FOAL', 'FOAM', 'FOIL', 'FOLD', 'FOLK', 'FOND', 'FONT', 'FOOD', 'FOOL', 'FOOT', 'FORD', 'FORE',
+        'FORK', 'FORM', 'FORT', 'FOUL', 'FOUR', 'FOWL', 'FOXY', 'FRAY', 'FREE', 'FRET', 'FROG', 'FROM',
+        'FUEL', 'FULL', 'FUME', 'FUND', 'FUNK', 'FURY', 'FUSE', 'FUSS', 'FUZZ', 'GAIN', 'GAIT', 'GALA',
+        'GALE', 'GALL', 'GAME', 'GANG', 'GAPE', 'GARB', 'GASH', 'GASP', 'GATE', 'GAVE', 'GAWK', 'GAZE',
+        'GEAR', 'GENE', 'GENT', 'GERM', 'GIFT', 'GILL', 'GILT', 'GIRD', 'GIRL', 'GIST', 'GIVE', 'GLAD',
+        'GLEE', 'GLEN', 'GLIB', 'GLOB', 'GLOP', 'GLOW', 'GLUE', 'GLUM', 'GLUT', 'GNAT', 'GNAW', 'GOAD',
+        'GOAL', 'GOAT', 'GOES', 'GOLD', 'GOLF', 'GONE', 'GONG', 'GOOD', 'GOOF', 'GORE', 'GORY', 'GOSH',
+        'GOUT', 'GOWN', 'GRAB', 'GRAD', 'GRAY', 'GREW', 'GREY', 'GRID', 'GRIM', 'GRIN', 'GRIP', 'GRIT',
+        'GRUB', 'GULF', 'GULL', 'GULP', 'GUNK', 'GURU', 'GUSH', 'GUST', 'GUTS', 'HACK', 'HAIL', 'HAIR',
+        'HALE', 'HALF', 'HALL', 'HALT', 'HAND', 'HANG', 'HANK', 'HARD', 'HARE', 'HARK', 'HARM', 'HARP',
+        'HART', 'HASH', 'HATE', 'HAUL', 'HAVE', 'HAWK', 'HAZE', 'HAZY', 'HEAD', 'HEAL', 'HEAP', 'HEAR',
+        'HEAT', 'HECK', 'HEED', 'HEEL', 'HEFT', 'HEIR', 'HELD', 'HELL', 'HELM', 'HELP', 'HEMP', 'HERB',
+        'HERD', 'HERE', 'HERO', 'HEWN', 'HIDE', 'HIGH', 'HIKE', 'HILL', 'HILT', 'HIND', 'HINT', 'HIRE',
+        'HIVE', 'HOAX', 'HOCK', 'HOLD', 'HOLE', 'HOLY', 'HOME', 'HONE', 'HONK', 'HOOD', 'HOOF', 'HOOK',
+        'HOOP', 'HOOT', 'HOPE', 'HORN', 'HOSE', 'HOST', 'HOUR', 'HOWL', 'HUFF', 'HUGE', 'HULK', 'HULL',
+        'HUMP', 'HUNG', 'HUNK', 'HUNT', 'HURL', 'HURT', 'HUSH', 'HUSK', 'HYMN', 'HYPE', 'ICED', 'ICON',
+        'IDEA', 'IDLE', 'IDOL', 'INCH', 'INFO', 'INTO', 'IOTA', 'IRIS', 'IRON', 'ISLE', 'ITCH', 'ITEM',
+        
+        // 5-letter words (selection)
+        'ABOUT', 'ABOVE', 'ABUSE', 'ACTOR', 'ACUTE', 'ADMIT', 'ADOPT', 'ADULT', 'AFTER', 'AGAIN',
+        'AGENT', 'AGREE', 'AHEAD', 'ALARM', 'ALBUM', 'ALERT', 'ALIVE', 'ALLOW', 'ALONE', 'ALONG',
+        'ALTER', 'ANGER', 'ANGLE', 'ANGRY', 'APART', 'APPLE', 'APPLY', 'ARENA', 'ARGUE', 'ARISE',
+        'ARRAY', 'ASIDE', 'ASSET', 'AVOID', 'AWARD', 'AWARE', 'BADLY', 'BAKER', 'BASES', 'BASIC',
+        'BEACH', 'BEGAN', 'BEING', 'BELOW', 'BENCH', 'BIRTH', 'BLACK', 'BLAME', 'BLIND', 'BLOCK',
+        'BLOOD', 'BOARD', 'BOOST', 'BOOTH', 'BOUND', 'BRAIN', 'BRAND', 'BREAD', 'BREAK', 'BREED',
+        'BRIEF', 'BRING', 'BROAD', 'BROKE', 'BROWN', 'BUILD', 'BUILT', 'BUYER', 'CABLE', 'CARRY',
+        'CATCH', 'CAUSE', 'CHAIN', 'CHAIR', 'CHAOS', 'CHARM', 'CHART', 'CHASE', 'CHEAP', 'CHECK',
+        'CHEST', 'CHIEF', 'CHILD', 'CHINA', 'CHOSE', 'CIVIL', 'CLAIM', 'CLASS', 'CLEAN', 'CLEAR',
+        'CLICK', 'CLOCK', 'CLOSE', 'COACH', 'COAST', 'COULD', 'COUNT', 'COURT', 'COVER', 'CRAFT',
+        'CRASH', 'CRAZY', 'CREAM', 'CRIME', 'CROSS', 'CROWD', 'CROWN', 'CRUDE', 'CURVE', 'CYCLE',
+        'DAILY', 'DANCE', 'DATED', 'DEALT', 'DEATH', 'DEBUT', 'DELAY', 'DEPTH', 'DOING', 'DOUBT',
+        'DOZEN', 'DRAFT', 'DRAMA', 'DRANK', 'DRAWN', 'DREAM', 'DRESS', 'DRILL', 'DRINK', 'DRIVE',
+        'DROVE', 'DYING', 'EAGER', 'EARLY', 'EARTH', 'EIGHT', 'ELDER', 'ELECT', 'EMPTY', 'ENEMY',
+        'ENJOY', 'ENTER', 'ENTRY', 'EQUAL', 'ERROR', 'EVENT', 'EVERY', 'EXACT', 'EXIST', 'EXTRA',
+        'FAITH', 'FALSE', 'FAULT', 'FIBER', 'FIELD', 'FIFTH', 'FIFTY', 'FIGHT', 'FINAL', 'FIRST',
+        'FIXED', 'FLASH', 'FLEET', 'FLOOR', 'FLUID', 'FOCUS', 'FORCE', 'FORTH', 'FORTY', 'FORUM',
+        'FOUND', 'FRAME', 'FRANK', 'FRAUD', 'FRESH', 'FRONT', 'FRUIT', 'FULLY', 'FUNNY', 'GIANT',
+        'GIVEN', 'GLASS', 'GLOBE', 'GOING', 'GRACE', 'GRADE', 'GRAND', 'GRANT', 'GRASS', 'GRAVE',
+        'GREAT', 'GREEN', 'GROSS', 'GROUP', 'GROWN', 'GUARD', 'GUESS', 'GUEST', 'GUIDE', 'HAPPY',
+        'HEART', 'HEAVY', 'HELLO', 'HORSE', 'HOTEL', 'HOUSE', 'HUMAN', 'IDEAL', 'IMAGE', 'IMPLY',
+        'INDEX', 'INNER', 'INPUT', 'ISSUE', 'JAPAN', 'JOINT', 'JUDGE', 'KNOWN', 'LABEL', 'LARGE',
+        'LASER', 'LATER', 'LAUGH', 'LAYER', 'LEARN', 'LEASE', 'LEAST', 'LEAVE', 'LEGAL', 'LEMON',
+        'LEVEL', 'LIGHT', 'LIMIT', 'LINKS', 'LIVES', 'LOCAL', 'LOGIC', 'LOOSE', 'LOWER', 'LUCKY',
+        'LUNCH', 'LYING', 'MAGIC', 'MAJOR', 'MAKER', 'MARCH', 'MATCH', 'MAYBE', 'MAYOR', 'MEANT',
+        'MEDIA', 'MIGHT', 'MINOR', 'MINUS', 'MIXED', 'MODEL', 'MONEY', 'MONTH', 'MORAL', 'MOTOR',
+        'MOUNT', 'MOUSE', 'MOUTH', 'MOVED', 'MOVIE', 'MUSIC', 'NEEDS', 'NEVER', 'NEWLY', 'NIGHT',
+        'NOISE', 'NORTH', 'NOTED', 'NOVEL', 'NURSE', 'OCCUR', 'OCEAN', 'OFFER', 'OFTEN', 'ORDER',
+        'OTHER', 'OUGHT', 'PAINT', 'PANEL', 'PAPER', 'PARTY', 'PEACE', 'PHASE', 'PHONE', 'PHOTO',
+        'PIANO', 'PIECE', 'PILOT', 'PITCH', 'PLACE', 'PLAIN', 'PLANE', 'PLANT', 'PLATE', 'POINT',
+        'POUND', 'POWER', 'PRESS', 'PRICE', 'PRIDE', 'PRIME', 'PRINT', 'PRIOR', 'PRIZE', 'PROOF',
+        'PROUD', 'PROVE', 'QUEEN', 'QUICK', 'QUIET', 'QUITE', 'RADIO', 'RAISE', 'RANGE', 'RAPID',
+        'RATIO', 'REACH', 'READY', 'REFER', 'RELAX', 'REPLY', 'RIGHT', 'RIVER', 'ROUGH', 'ROUND',
+        'ROUTE', 'ROYAL', 'RURAL', 'SCALE', 'SCENE', 'SCOPE', 'SCORE', 'SENSE', 'SERVE', 'SEVEN',
+        'SHALL', 'SHAPE', 'SHARE', 'SHARP', 'SHEET', 'SHELF', 'SHELL', 'SHIFT', 'SHINE', 'SHIRT',
+        'SHOCK', 'SHOOT', 'SHORT', 'SHOWN', 'SIGHT', 'SINCE', 'SIXTH', 'SIXTY', 'SIZED', 'SKILL',
+        'SLEEP', 'SLIDE', 'SMALL', 'SMART', 'SMILE', 'SMOKE', 'SOLID', 'SOLVE', 'SORRY', 'SOUND',
+        'SOUTH', 'SPACE', 'SPARE', 'SPEAK', 'SPEED', 'SPEND', 'SPENT', 'SPLIT', 'SPOKE', 'SPORT',
+        'STAFF', 'STAGE', 'STAKE', 'STAND', 'START', 'STATE', 'STEAM', 'STEEL', 'STICK', 'STILL',
+        'STOCK', 'STONE', 'STOOD', 'STORE', 'STORM', 'STORY', 'STRIP', 'STUCK', 'STUDY', 'STUFF',
+        'STYLE', 'SUGAR', 'SUITE', 'SUPER', 'SWEET', 'TABLE', 'TAKEN', 'TASTE', 'TAXES', 'TEACH',
+        'TEETH', 'THANK', 'THEFT', 'THEIR', 'THEME', 'THERE', 'THESE', 'THICK', 'THING', 'THINK',
+        'THIRD', 'THOSE', 'THREE', 'THREW', 'THROW', 'TIGHT', 'TIMES', 'TITLE', 'TODAY', 'TOPIC',
+        'TOTAL', 'TOUCH', 'TOUGH', 'TOWER', 'TRACK', 'TRADE', 'TRAIN', 'TRASH', 'TREAT', 'TREND',
+        'TRIAL', 'TRIED', 'TRIES', 'TRICK', 'TRULY', 'TRUST', 'TRUTH', 'TWICE', 'UNDER', 'UNDUE',
+        'UNION', 'UNITY', 'UNTIL', 'UPPER', 'UPSET', 'URBAN', 'USAGE', 'USUAL', 'VALID', 'VALUE',
+        'VIDEO', 'VIRUS', 'VISIT', 'VITAL', 'VOCAL', 'VOICE', 'WASTE', 'WATCH', 'WATER', 'WHEEL',
+        'WHERE', 'WHICH', 'WHILE', 'WHITE', 'WHOLE', 'WHOSE', 'WOMAN', 'WOMEN', 'WORLD', 'WORRY',
+        'WORSE', 'WORST', 'WORTH', 'WOULD', 'WOUND', 'WRITE', 'WRONG', 'WROTE', 'YIELD', 'YOUNG',
+        'YOUTH'
+    ]);
+
+    // Enhanced Game Class with proper round progression
+    class Game {
+        constructor() {
+            this.canvas = document.getElementById('gameCanvas');
+            this.ctx = this.canvas.getContext('2d');
+            
+            // Game state
+            this.currentState = 'menu';
+            this.currentRound = 1;
+            this.score = 0;
+            this.roundStartScore = 0;
+            
+            // Round tracking
+            this.totalWordsFound = 0;
+            this.totalLettersCollected = 0;
+            this.bestWord = '';
+            this.bestWordScore = 0;
+            
+            // Phase data
+            this.collectedLetters = [];
+            this.foundWords = [];
+            this.currentWord = [];
+            this.dictionary = GAME_DICTIONARY;
+            
+            // Game objects
+            this.snake = null;
+            this.letters = [];
+            
+            // Timers
+            this.gameTimer = null;
+            this.wordTimer = null;
+            this.timeRemaining = 0;
+            this.wordTimeRemaining = 0;
+            
+            // Animation
+            this.lastUpdate = 0;
+            this.moveAccumulator = 0;
+            this.animationFrame = null;
+            
+            this.initializeGame();
+        }
+
+        async initializeGame() {
+            try {
+                this.setupEventListeners();
+                this.setState('menu');
+            } catch (error) {
+                console.error('Game initialization failed:', error);
+                alert('Failed to initialize game. Please refresh the page.');
+            }
+        }
+
+        setupEventListeners() {
+            document.addEventListener('keydown', (e) => this.handleKeyPress(e));
+            
+            let touchStartX = null;
+            let touchStartY = null;
+            
+            this.canvas.addEventListener('touchstart', (e) => {
+                const touch = e.touches[0];
+                touchStartX = touch.clientX;
+                touchStartY = touch.clientY;
+                e.preventDefault();
+            }, { passive: false });
+            
+            this.canvas.addEventListener('touchend', (e) => {
+                if (!touchStartX || !touchStartY || this.currentState !== 'snake') return;
+                
+                const touch = e.changedTouches[0];
+                const dx = touch.clientX - touchStartX;
+                const dy = touch.clientY - touchStartY;
+                
+                const minSwipeDistance = 30;
+                
+                if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > minSwipeDistance) {
+                    this.snake.setDirection(dx > 0 ? 'RIGHT' : 'LEFT');
+                } else if (Math.abs(dy) > minSwipeDistance) {
+                    this.snake.setDirection(dy > 0 ? 'DOWN' : 'UP');
+                }
+                
+                touchStartX = null;
+                touchStartY = null;
+                e.preventDefault();
+            }, { passive: false });
+            
+            this.canvas.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+        }
+
+        handleKeyPress(e) {
+            if (this.currentState === 'snake') {
+                const keyMap = {
+                    'ArrowUp': 'UP', 'w': 'UP', 'W': 'UP',
+                    'ArrowDown': 'DOWN', 's': 'DOWN', 'S': 'DOWN',
+                    'ArrowLeft': 'LEFT', 'a': 'LEFT', 'A': 'LEFT',
+                    'ArrowRight': 'RIGHT', 'd': 'RIGHT', 'D': 'RIGHT'
+                };
+                
+                if (keyMap[e.key]) {
+                    this.snake.setDirection(keyMap[e.key]);
+                    e.preventDefault();
+                }
+            }
+        }
+
+        setState(newState) {
+            document.querySelectorAll('.game-state, #snakePhase, #wordPhase').forEach(el => {
+                el.classList.add('hidden');
+            });
+            
+            this.currentState = newState;
+            const stateMap = {
+                'menu': 'menuState',
+                'snake': 'snakePhase',
+                'word': 'wordPhase',
+                'gameOver': 'gameOverState'
+            };
+            
+            const element = document.getElementById(stateMap[newState]);
+            if (element) {
+                element.classList.remove('hidden');
+            }
+        }
+
+        // Calculate dynamic values based on round
+        getSnakeSpeed() {
+            return Math.max(80, CONFIG.BASE_SNAKE_SPEED - (this.currentRound - 1) * CONFIG.SPEED_INCREASE_PER_ROUND);
+        }
+
+        getCollectionTime() {
+            return Math.max(20, CONFIG.BASE_COLLECTION_TIME - (this.currentRound - 1) * CONFIG.TIME_DECREASE_PER_ROUND);
+        }
+
+        getWordTime() {
+            return Math.max(30, CONFIG.BASE_WORD_TIME - (this.currentRound - 1) * CONFIG.TIME_DECREASE_PER_ROUND);
+        }
+
+        getRoundTarget() {
+            return CONFIG.BASE_TARGET_SCORE + (this.currentRound - 1) * CONFIG.TARGET_INCREASE_PER_ROUND;
+        }
+
+        startGame() {
+            this.currentRound = 1;
+            this.score = 0;
+            this.roundStartScore = 0;
+            this.totalWordsFound = 0;
+            this.totalLettersCollected = 0;
+            this.bestWord = '';
+            this.bestWordScore = 0;
+            
+            this.startRound();
+        }
+
+        startRound() {
+            this.roundStartScore = this.score;
+            this.collectedLetters = [];
+            this.foundWords = [];
+            this.currentWord = [];
+            
+            this.showTransition('Collection Phase', `Round ${this.currentRound} - Collect letters as a snake!`, () => {
+                this.initSnakePhase();
+                this.setState('snake');
+            });
+        }
+
+        showTransition(title, message, callback) {
+            const transition = document.getElementById('phaseTransition');
+            const titleEl = document.getElementById('transitionTitle');
+            const messageEl = document.getElementById('transitionMessage');
+            
+            titleEl.textContent = title;
+            messageEl.textContent = message;
+            
+            transition.classList.add('show');
+            
+            setTimeout(() => {
+                transition.classList.remove('show');
+                if (callback) callback();
+            }, 2000);
+        }
+
+        initSnakePhase() {
+            // Update round display
+            document.getElementById('currentRound').textContent = this.currentRound;
+            document.getElementById('roundTarget').textContent = this.getRoundTarget();
+            document.getElementById('targetDisplay').textContent = this.getRoundTarget();
+            
+            this.snake = new Snake(this.getSnakeSpeed());
+            this.letters = [];
+            this.spawnLetters();
+            
+            this.timeRemaining = this.getCollectionTime();
+            this.updateTimer();
+            
+            this.gameTimer = setInterval(() => {
+                this.timeRemaining--;
+                this.updateTimer();
+                
+                if (this.timeRemaining <= 0) {
+                    this.endSnakePhase();
+                }
+            }, 1000);
+            
+            this.lastUpdate = 0;
+            this.moveAccumulator = 0;
+            
+            requestAnimationFrame((time) => this.gameLoop(time));
+        }
+
+        spawnLetters() {
+            const newLetterCount = CONFIG.LETTER_COUNT - this.letters.length;
+            const letterPool = [];
+            const vowels = ['A', 'E', 'I', 'O', 'U'];
+            
+            // Guarantee vowels
+            for (let i = 0; i < Math.min(2, newLetterCount); i++) {
+                letterPool.push(vowels[Math.floor(Math.random() * vowels.length)]);
+            }
+            
+            // Add weighted letters
+            for (const [letter, freq] of Object.entries(CONFIG.LETTER_FREQUENCIES)) {
+                const count = Math.ceil(freq / 3);
+                for (let i = 0; i < count; i++) {
+                    letterPool.push(letter);
+                }
+            }
+            
+            for (let i = 0; i < newLetterCount; i++) {
+                let position;
+                let attempts = 0;
+                
+                do {
+                    position = {
+                        x: Math.floor(Math.random() * CONFIG.GRID_SIZE),
+                        y: Math.floor(Math.random() * CONFIG.GRID_SIZE)
+                    };
+                    attempts++;
+                } while (this.isPositionOccupied(position) && attempts < 50);
+                
+                if (attempts < 50) {
+                    const letter = letterPool[Math.floor(Math.random() * letterPool.length)];
+                    this.letters.push({
+                        x: position.x,
+                        y: position.y,
+                        letter: letter,
+                        points: CONFIG.LETTER_POINTS[letter] || 1
+                    });
+                }
+            }
+        }
+
+        isPositionOccupied(pos) {
+            return this.snake.segments.some(seg => seg.x === pos.x && seg.y === pos.y) ||
+                   this.letters.some(letter => letter.x === pos.x && letter.y === pos.y);
+        }
+
+        gameLoop(currentTime) {
+            if (this.lastUpdate === 0) {
+                this.lastUpdate = currentTime;
+                this.moveAccumulator = 0;
+            }
+            
+            const deltaTime = Math.min(currentTime - this.lastUpdate, 100);
+            this.lastUpdate = currentTime;
+            
+            this.moveAccumulator += deltaTime;
+            
+            if (this.moveAccumulator >= this.snake.speed) {
+                this.snake.move();
+                this.checkCollisions();
+                this.moveAccumulator -= this.snake.speed;
+            }
+            
+            this.render();
+            
+            if (this.currentState === 'snake') {
+                this.animationFrame = requestAnimationFrame((time) => this.gameLoop(time));
+            }
+        }
+
+        checkCollisions() {
+            const head = this.snake.segments[0];
+            
+            // Letter collection
+            for (let i = this.letters.length - 1; i >= 0; i--) {
+                const letter = this.letters[i];
+                if (head.x === letter.x && head.y === letter.y) {
+                    this.collectLetter(letter);
+                    this.letters.splice(i, 1);
+                    this.snake.grow();
+                    
+                    if (this.letters.length < CONFIG.LETTER_COUNT) {
+                        this.spawnLetters();
+                    }
+                    break;
+                }
+            }
+            
+            // Self collision
+            if (this.snake.segments.length > 4) {
+                for (let i = 4; i < this.snake.segments.length; i++) {
+                    if (head.x === this.snake.segments[i].x && head.y === this.snake.segments[i].y) {
+                        this.gameOver('You bit yourself!');
+                        return;
+                    }
+                }
+            }
+        }
+
+        collectLetter(letter) {
+            this.collectedLetters.push(letter.letter);
+            this.totalLettersCollected++;
+            const points = letter.points * 10;
+            this.score += points;
+            this.updateHUD();
+            
+            this.showScorePopup(letter.x, letter.y, `+${points}`);
+        }
+
+        showScorePopup(gridX, gridY, text) {
+            const popup = document.createElement('div');
+            popup.className = 'score-popup';
+            popup.textContent = text;
+            
+            if (this.currentState === 'snake' && this.canvas) {
+                const rect = this.canvas.getBoundingClientRect();
+                popup.style.left = `${rect.left + gridX * CONFIG.CELL_SIZE + CONFIG.CELL_SIZE / 2}px`;
+                popup.style.top = `${rect.top + gridY * CONFIG.CELL_SIZE + CONFIG.CELL_SIZE / 2}px`;
+            } else {
+                const container = document.getElementById('gameContainer');
+                const rect = container.getBoundingClientRect();
+                popup.style.left = `${rect.left + rect.width / 2}px`;
+                popup.style.top = `${rect.top + rect.height / 2}px`;
+            }
+            
+            document.body.appendChild(popup);
+            setTimeout(() => popup.remove(), 1200);
+        }
+
+        render() {
+            this.ctx.fillStyle = '#FFFFFF';
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            
+            // Grid
+            this.ctx.strokeStyle = '#E9ECEF';
+            this.ctx.lineWidth = 1;
+            for (let i = 0; i <= CONFIG.GRID_SIZE; i++) {
+                this.ctx.beginPath();
+                this.ctx.moveTo(i * CONFIG.CELL_SIZE, 0);
+                this.ctx.lineTo(i * CONFIG.CELL_SIZE, this.canvas.height);
+                this.ctx.stroke();
+                
+                this.ctx.beginPath();
+                this.ctx.moveTo(0, i * CONFIG.CELL_SIZE);
+                this.ctx.lineTo(this.canvas.width, i * CONFIG.CELL_SIZE);
+                this.ctx.stroke();
+            }
+            
+            // Border
+            this.ctx.strokeStyle = '#DEE2E6';
+            this.ctx.lineWidth = 3;
+            this.ctx.strokeRect(0, 0, this.canvas.width, this.canvas.height);
+            
+            // Letters
+            this.letters.forEach(letter => {
+                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+                this.ctx.fillRect(
+                    letter.x * CONFIG.CELL_SIZE + 4,
+                    letter.y * CONFIG.CELL_SIZE + 4,
+                    CONFIG.CELL_SIZE - 4,
+                    CONFIG.CELL_SIZE - 4
+                );
+                
+                this.ctx.fillStyle = '#FFF3CD';
+                this.ctx.fillRect(
+                    letter.x * CONFIG.CELL_SIZE + 2,
+                    letter.y * CONFIG.CELL_SIZE + 2,
+                    CONFIG.CELL_SIZE - 4,
+                    CONFIG.CELL_SIZE - 4
+                );
+                
+                this.ctx.fillStyle = '#856404';
+                this.ctx.font = 'bold 16px Arial';
+                this.ctx.textAlign = 'center';
+                this.ctx.textBaseline = 'middle';
+                this.ctx.fillText(
+                    letter.letter,
+                    letter.x * CONFIG.CELL_SIZE + CONFIG.CELL_SIZE / 2,
+                    letter.y * CONFIG.CELL_SIZE + CONFIG.CELL_SIZE / 2
+                );
+                
+                this.ctx.font = '9px Arial';
+                this.ctx.fillText(
+                    letter.points.toString(),
+                    letter.x * CONFIG.CELL_SIZE + CONFIG.CELL_SIZE - 6,
+                    letter.y * CONFIG.CELL_SIZE + CONFIG.CELL_SIZE - 6
+                );
+            });
+            
+            this.snake.render(this.ctx);
+        }
+
+        updateHUD() {
+            document.getElementById('score').textContent = this.score;
+            document.getElementById('letterCount').textContent = this.collectedLetters.length;
+        }
+
+        updateTimer() {
+            const timerEl = document.getElementById('timer');
+            timerEl.textContent = this.timeRemaining;
+            
+            timerEl.className = '';
+            if (this.timeRemaining <= 5) {
+                timerEl.classList.add('timer-danger');
+            } else if (this.timeRemaining <= 10) {
+                timerEl.classList.add('timer-warning');
+            }
+        }
+
+        endSnakePhase() {
+            clearInterval(this.gameTimer);
+            cancelAnimationFrame(this.animationFrame);
+            
+            if (this.collectedLetters.length >= 3) {
+                this.showTransition('Word Building Phase', `Great! You collected ${this.collectedLetters.length} letters.\nNow build words to reach your target!`, () => {
+                    this.initWordPhase();
+                    this.setState('word');
+                });
+            } else {
+                this.gameOver(`Not enough letters! You collected ${this.collectedLetters.length}, need at least 3.`);
+            }
+        }
+
+        initWordPhase() {
+            // Calculate remaining target for this round
+            const roundTarget = this.getRoundTarget();
+            const currentRoundScore = this.score - this.roundStartScore;
+            const remainingTarget = Math.max(0, roundTarget - currentRoundScore);
+            
+            document.getElementById('wordPhaseTarget').textContent = remainingTarget;
+            
+            const letterBank = document.getElementById('letterBank');
+            letterBank.innerHTML = '';
+            
+            this.currentWord = [];
+            
+            // Create letter tiles
+            this.collectedLetters.forEach((letter, index) => {
+                const tile = document.createElement('div');
+                tile.className = 'letter-tile';
+                tile.textContent = letter;
+                tile.dataset.index = index;
+                
+                const points = document.createElement('span');
+                points.className = 'letter-points';
+                points.textContent = CONFIG.LETTER_POINTS[letter] || 1;
+                tile.appendChild(points);
+                
+                tile.addEventListener('click', () => {
+                    if (!tile.classList.contains('used')) {
+                        this.addLetterToWord(letter, index);
+                    }
+                });
+                
+                letterBank.appendChild(tile);
+            });
+            
+            this.updateWordDisplay();
+            this.updateFoundWords();
+            
+            // Start word phase timer
+            this.wordTimeRemaining = this.getWordTime();
+            this.updateWordTimer();
+            
+            this.wordTimer = setInterval(() => {
+                this.wordTimeRemaining--;
+                this.updateWordTimer();
+                
+                if (this.wordTimeRemaining <= 0) {
+                    this.finishWordPhase();
+                }
+            }, 1000);
+        }
+
+        updateWordTimer() {
+            const timerEl = document.getElementById('wordTimer');
+            timerEl.textContent = this.wordTimeRemaining;
+            
+            timerEl.className = '';
+            if (this.wordTimeRemaining <= 10) {
+                timerEl.classList.add('timer-danger');
+            } else if (this.wordTimeRemaining <= 20) {
+                timerEl.classList.add('timer-warning');
+            }
+        }
+
+        addLetterToWord(letter, index) {
+            if (this.currentWord.length >= 5) return;
+            
+            const tile = document.querySelector(`[data-index="${index}"]`);
+            if (!tile || tile.classList.contains('used')) return;
+            
+            this.currentWord.push({ letter, index });
+            tile.classList.add('used');
+            this.updateWordDisplay();
+        }
+
+        clearWord() {
+            this.currentWord.forEach(({ index }) => {
+                const tile = document.querySelector(`[data-index="${index}"]`);
+                if (tile) tile.classList.remove('used');
+            });
+            this.currentWord = [];
+            this.updateWordDisplay();
+        }
+
+        updateWordDisplay() {
+            const display = document.getElementById('currentWord');
+            display.innerHTML = '';
+            
+            for (let i = 0; i < 5; i++) {
+                const slot = document.createElement('div');
+                slot.className = 'word-slot';
+                if (this.currentWord[i]) {
+                    slot.textContent = this.currentWord[i].letter;
+                    slot.classList.add('filled');
+                }
+                display.appendChild(slot);
+            }
+        }
+
+        submitWord() {
+            if (this.currentWord.length < 3) {
+                alert('Words must be at least 3 letters long!');
+                return;
+            }
+            
+            const word = this.currentWord.map(({ letter }) => letter).join('');
+            
+            if (!this.dictionary.has(word)) {
+                alert(`"${word}" is not a valid word!`);
+                return;
+            }
+            
+            if (this.foundWords.some(w => w.word === word)) {
+                alert(`You already found "${word}"!`);
+                return;
+            }
+            
+            // Calculate points
+            let points = 0;
+            this.currentWord.forEach(({ letter }) => {
+                points += (CONFIG.LETTER_POINTS[letter] || 1) * 10;
+            });
+            
+            // Length bonus
+            points += word.length * 25;
+            
+            this.foundWords.push({ word, points });
+            this.totalWordsFound++;
+            this.score += points;
+            
+            // Track best word
+            if (points > this.bestWordScore) {
+                this.bestWordScore = points;
+                this.bestWord = word;
+            }
+            
+            this.updateFoundWords();
+            this.showScorePopup(0, 0, `+${points}!`);
+            this.clearWord();
+            
+            // Check if round target is met
+            this.checkRoundProgress();
+        }
+
+        checkRoundProgress() {
+            const roundTarget = this.getRoundTarget();
+            const currentRoundScore = this.score - this.roundStartScore;
+            
+            if (currentRoundScore >= roundTarget) {
+                // Round completed!
+                clearInterval(this.wordTimer);
+                
+                setTimeout(() => {
+                    this.completeRound();
+                }, 1000);
+            }
+        }
+
+        updateFoundWords() {
+            const list = document.getElementById('wordsList');
+            list.innerHTML = '';
+            
+            this.foundWords.forEach(({ word, points }) => {
+                const wordDiv = document.createElement('div');
+                wordDiv.className = 'found-word';
+                wordDiv.innerHTML = `${word} <span class="points">+${points}</span>`;
+                list.appendChild(wordDiv);
+            });
+            
+            // Update displays
+            document.getElementById('wordScore').textContent = this.score;
+            document.getElementById('wordsFoundCount').textContent = this.foundWords.length;
+            
+            // Update remaining target
+            const roundTarget = this.getRoundTarget();
+            const currentRoundScore = this.score - this.roundStartScore;
+            const remainingTarget = Math.max(0, roundTarget - currentRoundScore);
+            document.getElementById('wordPhaseTarget').textContent = remainingTarget;
+        }
+
+        finishWordPhase() {
+            clearInterval(this.wordTimer);
+            
+            const roundTarget = this.getRoundTarget();
+            const currentRoundScore = this.score - this.roundStartScore;
+            
+            if (currentRoundScore >= roundTarget) {
+                this.completeRound();
+            } else {
+                const deficit = roundTarget - currentRoundScore;
+                this.gameOver(`Round ${this.currentRound} failed!\nYou needed ${deficit} more points to advance.`);
+            }
+        }
+
+        completeRound() {
+            // Round bonus
+            const roundBonus = this.foundWords.length * 50 + this.currentRound * 100;
+            this.score += roundBonus;
+            
+            this.showTransition(
+                `Round ${this.currentRound} Complete!`, 
+                `Bonus: +${roundBonus} points\nGet ready for Round ${this.currentRound + 1}!`, 
+                () => {
+                    this.currentRound++;
+                    this.startRound();
+                }
+            );
+        }
+
+        gameOver(reason = 'Game Over!') {
+            clearInterval(this.gameTimer);
+            clearInterval(this.wordTimer);
+            cancelAnimationFrame(this.animationFrame);
+            
+            // Update final stats
+            document.getElementById('finalScore').textContent = this.score;
+            document.getElementById('roundsCompleted').textContent = this.currentRound - 1;
+            document.getElementById('totalWordsFound').textContent = this.totalWordsFound;
+            document.getElementById('totalLettersCollected').textContent = this.totalLettersCollected;
+            document.getElementById('bestWord').textContent = this.bestWord || '---';
+            
+            setTimeout(() => {
+                alert(reason);
+                this.setState('gameOver');
+            }, 100);
+        }
+
+        resetGame() {
+            this.setState('menu');
+        }
+    }
+
+    // Enhanced Snake Class
+    class Snake {
+        constructor(speed = CONFIG.BASE_SNAKE_SPEED) {
+            this.segments = [{ x: 10, y: 10 }];
+            this.direction = { x: 1, y: 0 };
+            this.nextDirection = { x: 1, y: 0 };
+            this.growing = false;
+            this.speed = speed;
+        }
+
+        setDirection(dir) {
+            const directions = {
+                'UP': { x: 0, y: -1 },
+                'DOWN': { x: 0, y: 1 },
+                'LEFT': { x: -1, y: 0 },
+                'RIGHT': { x: 1, y: 0 }
+            };
+            
+            const newDir = directions[dir];
+            if (!newDir) return;
+            
+            if (this.direction.x === -newDir.x && this.direction.y === -newDir.y) {
+                return;
+            }
+            
+            this.nextDirection = newDir;
+        }
+
+        move() {
+            this.direction = this.nextDirection;
+            
+            const head = { ...this.segments[0] };
+            head.x += this.direction.x;
+            head.y += this.direction.y;
+            
+            // Wall collision
+            if (head.x < 0 || head.x >= CONFIG.GRID_SIZE || 
+                head.y < 0 || head.y >= CONFIG.GRID_SIZE) {
+                if (window.gameInstance) {
+                    setTimeout(() => {
+                        window.gameInstance.gameOver('You hit the wall!');
+                    }, 50);
+                }
+                return;
+            }
+            
+            this.segments.unshift(head);
+            
+            if (!this.growing) {
+                this.segments.pop();
+            } else {
+                this.growing = false;
+            }
+        }
+
+        grow() {
+            this.growing = true;
+        }
+
+        render(ctx) {
+            this.segments.forEach((segment, index) => {
+                // Gradient effect for snake
+                const gradient = ctx.createLinearGradient(
+                    segment.x * CONFIG.CELL_SIZE,
+                    segment.y * CONFIG.CELL_SIZE,
+                    segment.x * CONFIG.CELL_SIZE + CONFIG.CELL_SIZE,
+                    segment.y * CONFIG.CELL_SIZE + CONFIG.CELL_SIZE
+                );
+                
+                if (index === 0) {
+                    gradient.addColorStop(0, '#159A7F');
+                    gradient.addColorStop(1, '#1BB295');
+                } else {
+                    gradient.addColorStop(0, '#1BB295');
+                    gradient.addColorStop(1, '#4ECDC4');
+                }
+                
+                ctx.fillStyle = gradient;
+                ctx.fillRect(
+                    segment.x * CONFIG.CELL_SIZE + 2,
+                    segment.y * CONFIG.CELL_SIZE + 2,
+                    CONFIG.CELL_SIZE - 4,
+                    CONFIG.CELL_SIZE - 4
+                );
+                
+                // Eyes on head
+                if (index === 0) {
+                    ctx.fillStyle = 'white';
+                    const eyeSize = 3;
+                    const eyeOffset = 5;
+                    
+                    if (this.direction.x === 1) { // Right
+                        ctx.fillRect(segment.x * CONFIG.CELL_SIZE + CONFIG.CELL_SIZE - eyeOffset - eyeSize, segment.y * CONFIG.CELL_SIZE + 5, eyeSize, eyeSize);
+                        ctx.fillRect(segment.x * CONFIG.CELL_SIZE + CONFIG.CELL_SIZE - eyeOffset - eyeSize, segment.y * CONFIG.CELL_SIZE + 12, eyeSize, eyeSize);
+                    } else if (this.direction.x === -1) { // Left
+                        ctx.fillRect(segment.x * CONFIG.CELL_SIZE + eyeOffset, segment.y * CONFIG.CELL_SIZE + 5, eyeSize, eyeSize);
+                        ctx.fillRect(segment.x * CONFIG.CELL_SIZE + eyeOffset, segment.y * CONFIG.CELL_SIZE + 12, eyeSize, eyeSize);
+                    } else if (this.direction.y === 1) { // Down
+                        ctx.fillRect(segment.x * CONFIG.CELL_SIZE + 5, segment.y * CONFIG.CELL_SIZE + CONFIG.CELL_SIZE - eyeOffset - eyeSize, eyeSize, eyeSize);
+                        ctx.fillRect(segment.x * CONFIG.CELL_SIZE + 12, segment.y * CONFIG.CELL_SIZE + CONFIG.CELL_SIZE - eyeOffset - eyeSize, eyeSize, eyeSize);
+                    } else { // Up
+                        ctx.fillRect(segment.x * CONFIG.CELL_SIZE + 5, segment.y * CONFIG.CELL_SIZE + eyeOffset, eyeSize, eyeSize);
+                        ctx.fillRect(segment.x * CONFIG.CELL_SIZE + 12, segment.y * CONFIG.CELL_SIZE + eyeOffset, eyeSize, eyeSize);
+                    }
+                }
+            });
+        }
+    }
+
+    // Global game instance and functions
+    let gameInstance = null;
+
+    function startGame() {
+        if (gameInstance) gameInstance.startGame();
+    }
+
+    function clearWord() {
+        if (gameInstance) gameInstance.clearWord();
+    }
+
+    function submitWord() {
+        if (gameInstance) gameInstance.submitWord();
+    }
+
+    function finishWordPhase() {
+        if (gameInstance) gameInstance.finishWordPhase();
+    }
+
+    function resetGame() {
+        if (gameInstance) gameInstance.resetGame();
+    }
+
+    // Initialize game
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            gameInstance = new Game();
+            window.gameInstance = gameInstance; // For debugging
+        });
+    } else {
+        gameInstance = new Game();
+        window.gameInstance = gameInstance;
+    }
+</script>
+```
+
+</body>
+</html>
