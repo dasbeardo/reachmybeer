@@ -1,0 +1,1320 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Eat Your Words - Word Collection Game</title>
+    <style>
+        :root {
+            --primary: #1BB295;
+            --secondary: #FF6B6B;
+            --background: #F8F9FA;
+            --text: #2C3E50;
+            --success: #51CF66;
+            --grid: #E9ECEF;
+            --shadow: rgba(0, 0, 0, 0.1);
+        }
+
+```
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: var(--background);
+        color: var(--text);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        overflow: hidden;
+        touch-action: none;
+    }
+
+    #gameContainer {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 24px var(--shadow);
+        padding: 24px;
+        max-width: 800px;
+        width: 100%;
+        margin: 20px;
+    }
+
+    #gameCanvas {
+        border: 2px solid var(--grid);
+        border-radius: 8px;
+        display: block;
+        margin: 0 auto;
+        cursor: pointer;
+        touch-action: none;
+    }
+
+    .hidden {
+        display: none !important;
+    }
+
+    .game-state {
+        text-align: center;
+        padding: 40px;
+    }
+
+    h1 {
+        color: var(--primary);
+        font-size: 2.5em;
+        margin-bottom: 20px;
+        font-weight: 700;
+    }
+
+    h2 {
+        color: var(--text);
+        font-size: 1.8em;
+        margin-bottom: 16px;
+    }
+
+    .btn {
+        background: var(--primary);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 12px 32px;
+        font-size: 1.1em;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin: 10px;
+    }
+
+    .btn:hover {
+        background: #159A7F;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px var(--shadow);
+    }
+
+    .btn:active {
+        transform: translateY(0);
+    }
+
+    .btn-secondary {
+        background: var(--secondary);
+    }
+
+    .btn-secondary:hover {
+        background: #E55555;
+    }
+
+    #gameHUD {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 16px;
+        font-size: 1.1em;
+        font-weight: 600;
+    }
+
+    .hud-item {
+        background: var(--background);
+        padding: 8px 16px;
+        border-radius: 6px;
+    }
+
+    #wordPhase {
+        text-align: center;
+        padding: 20px;
+    }
+
+    #letterBank {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 8px;
+        margin: 20px 0;
+        min-height: 120px;
+        background: var(--background);
+        padding: 16px;
+        border-radius: 8px;
+    }
+
+    .letter-tile {
+        width: 48px;
+        height: 48px;
+        background: white;
+        border: 2px solid var(--primary);
+        border-radius: 6px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4em;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        user-select: none;
+        position: relative;
+    }
+
+    .letter-tile:hover:not(.used) {
+        background: var(--primary);
+        color: white;
+        transform: scale(1.1);
+    }
+
+    .letter-tile.used {
+        opacity: 0.3;
+        cursor: not-allowed;
+        transform: scale(0.9);
+    }
+
+    .letter-points {
+        position: absolute;
+        bottom: 2px;
+        right: 4px;
+        font-size: 0.7em;
+        color: #666;
+    }
+
+    #currentWord {
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+        margin: 20px 0;
+        min-height: 60px;
+    }
+
+    .word-slot {
+        width: 56px;
+        height: 56px;
+        background: white;
+        border: 3px solid var(--text);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.6em;
+        font-weight: 700;
+    }
+
+    #wordActions {
+        display: flex;
+        justify-content: center;
+        gap: 16px;
+        margin: 20px 0;
+    }
+
+    #foundWords {
+        background: var(--background);
+        border-radius: 8px;
+        padding: 16px;
+        margin-top: 20px;
+        max-height: 200px;
+        overflow-y: auto;
+    }
+
+    .found-word {
+        display: inline-block;
+        background: white;
+        padding: 6px 12px;
+        margin: 4px;
+        border-radius: 4px;
+        font-weight: 600;
+        border: 1px solid var(--grid);
+    }
+
+    .points {
+        color: var(--primary);
+        font-size: 0.9em;
+        margin-left: 4px;
+    }
+
+    .loading {
+        color: var(--primary);
+        font-size: 1.2em;
+        text-align: center;
+        padding: 40px;
+    }
+
+    @keyframes scorePopup {
+        0% {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+        }
+        100% {
+            transform: translate(-50%, -80px) scale(1.5);
+            opacity: 0;
+        }
+    }
+
+    .score-popup {
+        position: fixed;
+        color: var(--success);
+        font-weight: 700;
+        font-size: 1.4em;
+        pointer-events: none;
+        animation: scorePopup 1s ease-out forwards;
+        z-index: 1000;
+    }
+
+    @media (max-width: 600px) {
+        #gameContainer {
+            padding: 16px;
+            margin: 10px;
+        }
+
+        h1 {
+            font-size: 2em;
+        }
+
+        .letter-tile {
+            width: 40px;
+            height: 40px;
+            font-size: 1.2em;
+        }
+
+        .word-slot {
+            width: 48px;
+            height: 48px;
+            font-size: 1.4em;
+        }
+    }
+</style>
+```
+
+</head>
+<body>
+    <div id="gameContainer">
+        <!-- Menu State -->
+        <div id="menuState" class="game-state">
+            <h1>🐍 Eat Your Words</h1>
+            <p style="font-size: 1.2em; margin-bottom: 30px; color: #6C757D;">
+                Collect letters as a snake, then build words to score!
+            </p>
+            <button class="btn" onclick="startGame()">Start Game</button>
+            <p style="margin-top: 30px; color: #6C757D;">
+                <strong>How to Play:</strong><br>
+                Phase 1: Control the snake to collect letters<br>
+                Phase 2: Build words from collected letters
+            </p>
+        </div>
+
+```
+    <!-- Snake Phase -->
+    <div id="snakePhase" class="hidden">
+        <div id="gameHUD">
+            <div class="hud-item">Score: <span id="score">0</span></div>
+            <div class="hud-item">Letters: <span id="letterCount">0</span></div>
+            <div class="hud-item">Time: <span id="timer">30</span>s</div>
+        </div>
+        <canvas id="gameCanvas" width="600" height="400"></canvas>
+        <p style="text-align: center; margin-top: 10px; color: #6C757D;">
+            Use arrow keys, WASD, or swipe to move
+        </p>
+    </div>
+
+    <!-- Word Building Phase -->
+    <div id="wordPhase" class="hidden">
+        <h2>Build Your Words!</h2>
+        <p style="color: #6C757D; margin-bottom: 20px;">
+            Click letters to build words (3-5 letters)
+        </p>
+        
+        <div id="letterBank"></div>
+        
+        <div id="currentWord"></div>
+        
+        <div id="wordActions">
+            <button class="btn btn-secondary" onclick="clearWord()">Clear</button>
+            <button class="btn" onclick="submitWord()">Submit Word</button>
+        </div>
+        
+        <div id="foundWords">
+            <h3>Found Words</h3>
+            <div id="wordsList"></div>
+        </div>
+        
+        <button class="btn" onclick="endWordPhase()" style="margin-top: 20px;">
+            Finish Round
+        </button>
+    </div>
+
+    <!-- Game Over State -->
+    <div id="gameOverState" class="game-state hidden">
+        <h1>Game Over!</h1>
+        <h2 style="color: var(--primary); margin: 20px 0;">
+            Final Score: <span id="finalScore">0</span>
+        </h2>
+        <div id="gameStats" style="margin: 20px 0; font-size: 1.1em;">
+            <p>Words Found: <span id="wordsFound">0</span></p>
+            <p>Letters Collected: <span id="lettersCollected">0</span></p>
+        </div>
+        <button class="btn" onclick="resetGame()">Play Again</button>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loadingState" class="loading">
+        Loading game...
+    </div>
+</div>
+
+<script>
+    // Game Configuration with carefully tuned parameters
+    const CONFIG = {
+        GRID_SIZE: 20,
+        CELL_SIZE: 30,
+        SNAKE_SPEED: 150,
+        LETTER_COUNT: 8,
+        COLLECTION_TIME: 30,
+        LETTER_FREQUENCIES: {
+            'E': 12.70, 'T': 9.06, 'A': 8.17, 'O': 7.51, 'I': 6.97,
+            'N': 6.75, 'S': 6.33, 'H': 6.09, 'R': 5.99, 'D': 4.25,
+            'L': 4.03, 'C': 2.78, 'U': 2.76, 'M': 2.41, 'W': 2.36,
+            'F': 2.23, 'G': 2.02, 'Y': 1.97, 'P': 1.93, 'B': 1.29,
+            'V': 0.98, 'K': 0.77, 'J': 0.15, 'X': 0.15, 'Q': 0.10,
+            'Z': 0.07
+        },
+        LETTER_POINTS: {
+            'E': 1, 'A': 1, 'I': 1, 'O': 1, 'U': 1, 'L': 1, 'N': 1, 'S': 1, 'T': 1, 'R': 1,
+            'D': 2, 'G': 2,
+            'B': 3, 'C': 3, 'M': 3, 'P': 3,
+            'F': 4, 'H': 4, 'V': 4, 'W': 4, 'Y': 4,
+            'K': 5,
+            'J': 8, 'X': 8,
+            'Q': 10, 'Z': 10
+        }
+    };
+
+    // Core game dictionary - optimized common words for better gameplay
+    const GAME_DICTIONARY = new Set([
+        // 3-letter words
+        'ACE', 'ACT', 'ADD', 'AGE', 'AID', 'AIM', 'AIR', 'ALL', 'AND', 'ANT', 'ANY', 'APE', 'ARC',
+        'ARE', 'ARK', 'ARM', 'ART', 'ASH', 'ASK', 'ATE', 'AWE', 'AXE', 'BAD', 'BAG', 'BAR', 'BAT',
+        'BAY', 'BED', 'BEE', 'BET', 'BIG', 'BIT', 'BOW', 'BOX', 'BOY', 'BUD', 'BUG', 'BUS', 'BUT',
+        'BUY', 'CAB', 'CAN', 'CAP', 'CAR', 'CAT', 'COB', 'COD', 'COG', 'COT', 'COW', 'CRY', 'CUB',
+        'CUP', 'CUT', 'DAD', 'DAM', 'DAY', 'DEN', 'DEW', 'DID', 'DIG', 'DIM', 'DOC', 'DOG', 'DOT',
+        'DRY', 'DUB', 'DUE', 'DUG', 'EAR', 'EAT', 'EEL', 'EGG', 'ELF', 'ELK', 'ELM', 'END', 'ERA',
+        'EVE', 'EYE', 'FAD', 'FAN', 'FAR', 'FAT', 'FAX', 'FED', 'FEW', 'FIG', 'FIN', 'FIR', 'FIT',
+        'FIX', 'FLU', 'FLY', 'FOE', 'FOG', 'FOR', 'FOX', 'FRY', 'FUN', 'FUR', 'GAP', 'GAS', 'GAY',
+        'GEL', 'GET', 'GIG', 'GIN', 'GOD', 'GOT', 'GUM', 'GUN', 'GUT', 'GUY', 'GYM', 'HAD', 'HAM',
+        'HAS', 'HAT', 'HAY', 'HEN', 'HER', 'HEX', 'HEY', 'HID', 'HIM', 'HIS', 'HIT', 'HOG', 'HOP',
+        'HOT', 'HOW', 'HUB', 'HUG', 'HUM', 'HUT', 'ICE', 'ICY', 'ILL', 'IMP', 'INK', 'INN', 'ION',
+        'ITS', 'IVY', 'JAB', 'JAG', 'JAM', 'JAR', 'JAW', 'JAY', 'JET', 'JIG', 'JOB', 'JOG', 'JOT',
+        'JOY', 'JUG', 'KEG', 'KEN', 'KEY', 'KID', 'KIN', 'KIT', 'LAB', 'LAC', 'LAD', 'LAG', 'LAP',
+        'LAW', 'LAX', 'LAY', 'LEA', 'LED', 'LEG', 'LET', 'LID', 'LIE', 'LIP', 'LIT', 'LOG', 'LOT',
+        'LOW', 'LUG', 'MAC', 'MAD', 'MAN', 'MAP', 'MAT', 'MAX', 'MAY', 'MEN', 'MET', 'MID', 'MIX',
+        'MOB', 'MOD', 'MOM', 'MOP', 'MOW', 'MUD', 'MUG', 'NAG', 'NAP', 'NET', 'NEW', 'NIL', 'NIT',
+        'NOD', 'NOR', 'NOT', 'NOW', 'NUN', 'NUT', 'OAK', 'OAR', 'OAT', 'ODD', 'ODE', 'OFF', 'OIL',
+        'OLD', 'ONE', 'OPT', 'ORB', 'ORE', 'OUR', 'OUT', 'OWE', 'OWL', 'OWN', 'PAD', 'PAL', 'PAN',
+        'PAT', 'PAW', 'PAX', 'PAY', 'PEA', 'PEG', 'PEN', 'PEP', 'PER', 'PET', 'PIE', 'PIG', 'PIN',
+        'PIT', 'PLY', 'POD', 'POP', 'POT', 'PRO', 'PRY', 'PUB', 'PUG', 'PUN', 'PUP', 'PUS', 'PUT',
+        'RAG', 'RAM', 'RAN', 'RAP', 'RAT', 'RAW', 'RAY', 'RED', 'REP', 'RIB', 'RID', 'RIG', 'RIM',
+        'RIP', 'ROB', 'ROD', 'ROE', 'ROT', 'ROW', 'RUB', 'RUG', 'RUM', 'RUN', 'RUT', 'RYE', 'SAC',
+        'SAD', 'SAG', 'SAP', 'SAT', 'SAW', 'SAX', 'SAY', 'SEA', 'SEE', 'SET', 'SEW', 'SEX', 'SHE',
+        'SHY', 'SIN', 'SIP', 'SIR', 'SIS', 'SIT', 'SIX', 'SKI', 'SKY', 'SLY', 'SOB', 'SOD', 'SON',
+        'SOP', 'SOT', 'SOW', 'SOX', 'SOY', 'SPA', 'SPY', 'STY', 'SUB', 'SUM', 'SUN', 'SUP', 'TAB',
+        'TAD', 'TAG', 'TAN', 'TAP', 'TAR', 'TAT', 'TAX', 'TEA', 'TEN', 'THE', 'TIC', 'TIE', 'TIN',
+        'TIP', 'TOE', 'TON', 'TOO', 'TOP', 'TOT', 'TOW', 'TOY', 'TRY', 'TUB', 'TUG', 'TWO', 'URN',
+        'USE', 'VAN', 'VAT', 'VET', 'VIA', 'VIE', 'VOW', 'WAD', 'WAG', 'WAR', 'WAS', 'WAX', 'WAY',
+        'WEB', 'WED', 'WEE', 'WET', 'WHO', 'WHY', 'WIG', 'WIN', 'WIT', 'WOE', 'WOK', 'WON', 'WOO',
+        'WOW', 'YAK', 'YAM', 'YAP', 'YEA', 'YEN', 'YES', 'YET', 'YEW', 'YIN', 'YOU', 'YOW', 'ZAG',
+        'ZAP', 'ZEN', 'ZIG', 'ZIP', 'ZIT', 'ZOO',
+        // 4-letter words
+        'ABLE', 'ACHE', 'ACID', 'ACNE', 'ACRE', 'AGED', 'AIDE', 'AIDS', 'AIRY', 'AJAR', 'ALLY',
+        'ALSO', 'ALTO', 'AMID', 'ANKH', 'ANTE', 'APEX', 'ARCH', 'AREA', 'ARID', 'ARMY', 'ATOM',
+        'AUNT', 'AURA', 'AUTO', 'AWAY', 'AXIS', 'BABY', 'BACK', 'BAIL', 'BAIT', 'BAKE', 'BALD',
+        'BALE', 'BALL', 'BALM', 'BAND', 'BANE', 'BANG', 'BANK', 'BARE', 'BARK', 'BARN', 'BASE',
+        'BASH', 'BASK', 'BASS', 'BATH', 'BEAD', 'BEAK', 'BEAM', 'BEAN', 'BEAR', 'BEAT', 'BECK',
+        'BEEF', 'BEEN', 'BEER', 'BEET', 'BELL', 'BELT', 'BEND', 'BENT', 'BERG', 'BEST', 'BETA',
+        'BIAS', 'BIKE', 'BILE', 'BILL', 'BIND', 'BIRD', 'BITE', 'BLOW', 'BLUE', 'BLUR', 'BOAR',
+        'BOAT', 'BODY', 'BOIL', 'BOLD', 'BOLT', 'BOMB', 'BOND', 'BONE', 'BOOK', 'BOOM', 'BOOT',
+        'BORE', 'BORN', 'BOSS', 'BOTH', 'BOUT', 'BOWL', 'BOXY', 'BRAG', 'BRAN', 'BRAT', 'BRAY',
+        'BREW', 'BRIM', 'BROW', 'BUCK', 'BULB', 'BULK', 'BULL', 'BUMP', 'BUNK', 'BUOY', 'BURN',
+        'BURP', 'BURY', 'BUSH', 'BUST', 'BUSY', 'BUZZ', 'CAFE', 'CAGE', 'CAKE', 'CALF', 'CALL',
+        'CALM', 'CAME', 'CAMP', 'CANE', 'CAPE', 'CARD', 'CARE', 'CARP', 'CART', 'CASE', 'CASH',
+        'CASK', 'CAST', 'CAVE', 'CELL', 'CENT', 'CHAP', 'CHAR', 'CHAT', 'CHEF', 'CHEW', 'CHIN',
+        'CHIP', 'CHOP', 'CHUM', 'CITE', 'CITY', 'CLAD', 'CLAM', 'CLAN', 'CLAP', 'CLAW', 'CLAY',
+        'CLEF', 'CLIP', 'CLOD', 'CLOG', 'CLUB', 'CLUE', 'COAL', 'COAT', 'COAX', 'CODE', 'COIL',
+        'COIN', 'COLD', 'COLT', 'COMA', 'COMB', 'COME', 'CONE', 'COOK', 'COOL', 'COPE', 'COPY',
+        'CORD', 'CORE', 'CORK', 'CORN', 'COST', 'COSY', 'COUP', 'COVE', 'CRAB', 'CRAM', 'CRAW',
+        'CREW', 'CRIB', 'CROP', 'CROW', 'CRUX', 'CUBE', 'CUFF', 'CULT', 'CURB', 'CURE', 'CURL',
+        'CUTE', 'DAFT', 'DAME', 'DAMP', 'DARE', 'DARK', 'DARN', 'DART', 'DASH', 'DATA', 'DATE',
+        'DAWN', 'DAZE', 'DEAD', 'DEAF', 'DEAL', 'DEAN', 'DEAR', 'DEBT', 'DECK', 'DEED', 'DEEM',
+        'DEEP', 'DEER', 'DEMO', 'DENT', 'DENY', 'DESK', 'DIAL', 'DICE', 'DIED', 'DIET', 'DILL',
+        'DIME', 'DINE', 'DING', 'DIRE', 'DIRT', 'DISC', 'DISH', 'DISK', 'DIVE', 'DOCK', 'DODO',
+        'DOER', 'DOLE', 'DOLL', 'DOME', 'DONE', 'DOOM', 'DOOR', 'DOPE', 'DOSE', 'DOTE', 'DOVE',
+        'DOWN', 'DOZE', 'DRAB', 'DRAG', 'DRAM', 'DRAW', 'DRAY', 'DREW', 'DRIP', 'DROP', 'DRUB',
+        'DRUG', 'DRUM', 'DUAL', 'DUCK', 'DUCT', 'DUEL', 'DUET', 'DUKE', 'DULL', 'DUMB', 'DUMP',
+        'DUNE', 'DUNG', 'DUNK', 'DUPE', 'DUSK', 'DUST', 'DUTY', 'DYED', 'DYER', 'EACH', 'EARL',
+        'EARN', 'EASE', 'EAST', 'EASY', 'ECHO', 'EDDY', 'EDGE', 'EDGY', 'EDIT', 'EMIT', 'ENVY',
+        'EPIC', 'EVEN', 'EVER', 'EVIL', 'EXAM', 'EXIT', 'EXPO', 'EYED', 'FACE', 'FACT', 'FADE',
+        'FAIL', 'FAIR', 'FAKE', 'FALL', 'FAME', 'FANG', 'FARE', 'FARM', 'FAST', 'FATE', 'FAWN',
+        'FEAR', 'FEAT', 'FEED', 'FEEL', 'FEET', 'FELL', 'FELT', 'FEND', 'FERN', 'FEST', 'FEUD',
+        'FIAT', 'FIEF', 'FIFE', 'FILE', 'FILL', 'FILM', 'FIND', 'FINE', 'FINK', 'FIRE', 'FIRM',
+        'FISH', 'FIST', 'FIVE', 'FLAG', 'FLAK', 'FLAP', 'FLAT', 'FLAW', 'FLAX', 'FLEA', 'FLED',
+        'FLEE', 'FLEW', 'FLEX', 'FLIP', 'FLIT', 'FLOG', 'FLOP', 'FLOW', 'FLUB', 'FLUE', 'FLUX',
+        'FOAL', 'FOAM', 'FOGY', 'FOIL', 'FOLD', 'FOLK', 'FOND', 'FONT', 'FOOD', 'FOOL', 'FOOT',
+        'FORD', 'FORE', 'FORK', 'FORM', 'FORT', 'FOUL', 'FOUR', 'FOWL', 'FOXY', 'FRAY', 'FRED',
+        'FREE', 'FRET', 'FROG', 'FROM', 'FUEL', 'FULL', 'FUME', 'FUND', 'FUNK', 'FURY', 'FUSE',
+        'FUSS', 'FUZZ', 'GAFF', 'GAGE', 'GAIN', 'GAIT', 'GALA', 'GALE', 'GALL', 'GAME', 'GANG',
+        'GAPE', 'GARB', 'GASH', 'GASP', 'GATE', 'GAVE', 'GAWK', 'GAZE', 'GEAR', 'GELD', 'GENE',
+        'GENT', 'GERM', 'GIFT', 'GILD', 'GILL', 'GILT', 'GIRD', 'GIRL', 'GIST', 'GIVE', 'GLAD',
+        'GLEE', 'GLEN', 'GLIB', 'GLOB', 'GLOP', 'GLOW', 'GLUE', 'GLUM', 'GLUT', 'GNAT', 'GNAW',
+        'GOAD', 'GOAL', 'GOAT', 'GOES', 'GOLD', 'GOLF', 'GONE', 'GONG', 'GOOD', 'GOOF', 'GORE',
+        'GORY', 'GOSH', 'GOUT', 'GOWN', 'GRAB', 'GRAD', 'GRAY', 'GREW', 'GREY', 'GRID', 'GRIM',
+        'GRIN', 'GRIP', 'GRIT', 'GRUB', 'GULF', 'GULL', 'GULP', 'GUNK', 'GURU', 'GUSH', 'GUST',
+        'GUTS', 'GYRO', 'HACK', 'HAIL', 'HAIR', 'HALE', 'HALF', 'HALL', 'HALT', 'HAND', 'HANG',
+        'HANK', 'HARD', 'HARE', 'HARK', 'HARM', 'HARP', 'HART', 'HASH', 'HATE', 'HAUL', 'HAVE',
+        'HAWK', 'HAZE', 'HAZY', 'HEAD', 'HEAL', 'HEAP', 'HEAR', 'HEAT', 'HECK', 'HEED', 'HEEL',
+        'HEFT', 'HEIR', 'HELD', 'HELL', 'HELM', 'HELP', 'HEMP', 'HERB', 'HERD', 'HERE', 'HERO',
+        'HEWN', 'HIDE', 'HIGH', 'HIKE', 'HILL', 'HILT', 'HIND', 'HINT', 'HIRE', 'HIVE', 'HOAX',
+        'HOCK', 'HOLD', 'HOLE', 'HOLY', 'HOME', 'HONE', 'HONK', 'HOOD', 'HOOF', 'HOOK', 'HOOP',
+        'HOOT', 'HOPE', 'HORN', 'HOSE', 'HOST', 'HOUR', 'HOWL', 'HUFF', 'HUGE', 'HULK', 'HULL',
+        'HUMP', 'HUNG', 'HUNK', 'HUNT', 'HURL', 'HURT', 'HUSH', 'HUSK', 'HYMN', 'HYPE', 'ICED',
+        'ICON', 'IDEA', 'IDLE', 'IDOL', 'INCH', 'INFO', 'INTO', 'IOTA', 'IRIS', 'IRON', 'ISLE',
+        'ITCH', 'ITEM', 'JACK', 'JADE', 'JAIL', 'JAKE', 'JAMB', 'JANE', 'JAPE', 'JAVA', 'JAZZ',
+        'JEEP', 'JEER', 'JELL', 'JERK', 'JEST', 'JIBE', 'JILT', 'JINK', 'JINX', 'JIVE',
+        'JOCK', 'JOHN', 'JOIN', 'JOKE', 'JOLT', 'JOSH', 'JOWL', 'JUDO', 'JULY', 'JUMP', 'JUNE',
+        'JUNK', 'JURY', 'JUST', 'KALE', 'KEEN', 'KEEP', 'KELP', 'KEPT', 'KICK', 'KILL', 'KILN',
+        'KILO', 'KILT', 'KIND', 'KING', 'KINK', 'KIRK', 'KISS', 'KITE', 'KNEE', 'KNEW', 'KNIT',
+        'KNOB', 'KNOT', 'KNOW', 'KUNG', 'LACE', 'LACK', 'LACY', 'LADY', 'LAID', 'LAIN', 'LAIR',
+        'LAKE', 'LAMB', 'LAME', 'LAMP', 'LAND', 'LANE', 'LANK', 'LARD', 'LARK', 'LASH', 'LASS',
+        'LAST', 'LATE', 'LAUD', 'LAVA', 'LAWN', 'LAZE', 'LAZY', 'LEAD', 'LEAF', 'LEAK', 'LEAN',
+        'LEAP', 'LEAS', 'LEER', 'LEFT', 'LEND', 'LENS', 'LENT', 'LESS', 'LEST', 'LEVY', 'LEWD',
+        'LIAR', 'LICE', 'LICK', 'LIED', 'LIEN', 'LIEU', 'LIFE', 'LIFT', 'LIKE', 'LILT', 'LILY',
+        'LIMB', 'LIME', 'LIMP', 'LINE', 'LINK', 'LINT', 'LION', 'LISP', 'LIST', 'LIVE', 'LOAD',
+        'LOAF', 'LOAM', 'LOAN', 'LOBE', 'LOCK', 'LODE', 'LOFT', 'LOIN', 'LOLL', 'LONE', 'LONG',
+        'LOOK', 'LOOM', 'LOON', 'LOOP', 'LOOT', 'LOPE', 'LORD', 'LORE', 'LORN', 'LOSE', 'LOSS',
+        'LOST', 'LOTH', 'LOUD', 'LOUT', 'LOVE', 'LUCK', 'LULL', 'LUMP', 'LUNG', 'LURE', 'LURK',
+        'LUSH', 'LUST', 'LUTE', 'LYNX', 'LYRE', 'MACE', 'MADE', 'MAGE', 'MAID', 'MAIL', 'MAIM',
+        'MAIN', 'MAKE', 'MALE', 'MALL', 'MALT', 'MAMA', 'MANE', 'MANY', 'MARE', 'MARK', 'MARS',
+        'MART', 'MASH', 'MASK', 'MASS', 'MAST', 'MATE', 'MATH', 'MAUL', 'MAZE', 'MEAD', 'MEAL',
+        'MEAN', 'MEAT', 'MEEK', 'MEET', 'MELD', 'MELT', 'MEMO', 'MEND', 'MENU', 'MEOW', 'MERE',
+        'MESH', 'MESS', 'MICA', 'MICE', 'MIDI', 'MILD', 'MILE', 'MILK', 'MILL', 'MIME', 'MIND',
+        'MINE', 'MINK', 'MINT', 'MINX', 'MIRE', 'MISS', 'MIST', 'MITE', 'MITT', 'MOAN', 'MOAT',
+        'MOCK', 'MODE', 'MOLD', 'MOLE', 'MOLT', 'MONK', 'MONO', 'MOOD', 'MOON', 'MOOR', 'MOOT',
+        'MOPE', 'MORE', 'MORN', 'MOSS', 'MOST', 'MOTH', 'MOVE', 'MUCH', 'MUCK', 'MUFF', 'MULE',
+        'MULL', 'MUMP', 'MUSE', 'MUSH', 'MUSK', 'MUSS', 'MUST', 'MUTE', 'MUTT', 'MYTH', 'NAIL',
+        'NAME', 'NAPE', 'NARY', 'NAVE', 'NAVY', 'NEAR', 'NEAT', 'NECK', 'NEED', 'NEON', 'NERD',
+        'NEST', 'NEWS', 'NEWT', 'NEXT', 'NICE', 'NICK', 'NIGH', 'NINE', 'NODE', 'NONE', 'NOOK',
+        'NOON', 'NOPE', 'NORM', 'NOSE', 'NOSY', 'NOTE', 'NOUN', 'NUDE', 'NULL', 'NUMB', 'NUNS',
+        'OATH', 'OBEY', 'OBOE', 'ODDS', 'ODOR', 'OGRE', 'OILY', 'OKAY', 'OMEN', 'OMIT', 'ONCE',
+        'ONLY', 'ONTO', 'OOZE', 'OPAL', 'OPEN', 'OPUS', 'ORAL', 'ORCA', 'OVEN', 'OVER', 'OWED',
+        'OWES', 'OWNS', 'OXEN', 'PACE', 'PACK', 'PACT', 'PAGE', 'PAID', 'PAIL', 'PAIN', 'PAIR',
+        'PALE', 'PALM', 'PANE', 'PANG', 'PANT', 'PAPA', 'PARE', 'PARK', 'PART', 'PASS', 'PAST',
+        'PATH', 'PAVE', 'PAWN', 'PEAK', 'PEAL', 'PEAR', 'PEAT', 'PECK', 'PEEL', 'PEEP', 'PEER',
+        'PELT', 'PEND', 'PENT', 'PEON', 'PERK', 'PERM', 'PERT', 'PEST', 'PHEW', 'PICK', 'PIER',
+        'PIKE', 'PILE', 'PILL', 'PIMP', 'PINE', 'PING', 'PINK', 'PINT', 'PIPE', 'PITY', 'PLAN',
+        'PLAY', 'PLEA', 'PLED', 'PLOD', 'PLOP', 'PLOT', 'PLOW', 'PLOY', 'PLUG', 'PLUM', 'PLUS',
+        'POCK', 'POEM', 'POET', 'POKE', 'POLE', 'POLL', 'POLO', 'POND', 'PONY', 'POOL', 'POOP',
+        'POOR', 'POPE', 'PORE', 'PORK', 'PORT', 'POSE', 'POSH', 'POST', 'POSY', 'POUR', 'POUT',
+        'PRAY', 'PREP', 'PREY', 'PRIG', 'PRIM', 'PROD', 'PROM', 'PROP', 'PROW', 'PUCK', 'PUFF',
+        'PUKE', 'PULL', 'PULP', 'PUMA', 'PUMP', 'PUNK', 'PUNY', 'PURE', 'PURL', 'PURR', 'PUSH',
+        'PUTT', 'PYRE', 'QUAD', 'QUAY', 'QUID', 'QUIT', 'QUIZ', 'RACE', 'RACK', 'RACY', 'RAFT',
+        'RAGE', 'RAID', 'RAIL', 'RAIN', 'RAKE', 'RAMP', 'RANG', 'RANK', 'RANT', 'RAPE', 'RAPT',
+        'RARE', 'RASH', 'RASP', 'RATE', 'RAVE', 'RAZE', 'READ', 'REAL', 'REAM', 'REAP', 'REAR',
+        'REDO', 'REED', 'REEF', 'REEK', 'REEL', 'REIN', 'RELY', 'REND', 'RENT', 'REST', 'RICE',
+        'RICH', 'RICK', 'RIDE', 'RIFE', 'RIFF', 'RIFT', 'RILE', 'RILL', 'RIND', 'RING', 'RINK',
+        'RIOT', 'RIPE', 'RISE', 'RISK', 'RITE', 'ROAD', 'ROAM', 'ROAN', 'ROAR', 'ROBE', 'ROCK',
+        'RODE', 'ROIL', 'ROLE', 'ROLL', 'ROMP', 'ROOD', 'ROOF', 'ROOK', 'ROOM', 'ROOT', 'ROPE',
+        'ROSY', 'ROTE', 'ROUE', 'ROUT', 'ROVE', 'RUBE', 'RUBY', 'RUDE', 'RUED', 'RUIN', 'RULE',
+        'RUMP', 'RUNE', 'RUNG', 'RUNT', 'RUSE', 'RUSH', 'RUST', 'RUTH', 'SACK', 'SAFE', 'SAGA',
+        'SAGE', 'SAID', 'SAIL', 'SAKE', 'SALE', 'SALT', 'SAME', 'SAND', 'SANE', 'SANG', 'SANK',
+        'SASH', 'SASS', 'SAVE', 'SCAB', 'SCAD', 'SCAM', 'SCAN', 'SCAR', 'SCAT', 'SCOW', 'SCUM',
+        'SEAL', 'SEAM', 'SEAR', 'SEAT', 'SECT', 'SEED', 'SEEK', 'SEEM', 'SEEN', 'SEEP', 'SEER',
+        'SELF', 'SELL', 'SEND', 'SENT', 'SEPT', 'SERF', 'SETS', 'SEWN', 'SHAD', 'SHAG', 'SHAM',
+        'SHED', 'SHIM', 'SHIN', 'SHIP', 'SHOD', 'SHOE', 'SHOO', 'SHOP', 'SHOT', 'SHOW', 'SHUN',
+        'SHUT', 'SICK', 'SIDE', 'SIFT', 'SIGH', 'SIGN', 'SILK', 'SILL', 'SILO', 'SILT', 'SINE',
+        'SING', 'SINK', 'SIRE', 'SITE', 'SIZE', 'SKEW', 'SKID', 'SKIM', 'SKIN', 'SKIP', 'SKIT',
+        'SLAB', 'SLAG', 'SLAM', 'SLAP', 'SLAT', 'SLAW', 'SLAY', 'SLED', 'SLEW', 'SLID', 'SLIM',
+        'SLIP', 'SLIT', 'SLOB', 'SLOE', 'SLOG', 'SLOP', 'SLOT', 'SLOW', 'SLUE', 'SLUG', 'SLUM',
+        'SLUR', 'SLUT', 'SMOG', 'SMUG', 'SNAG', 'SNAP', 'SNIP', 'SNIT', 'SNOB', 'SNOT', 'SNOW',
+        'SNUB', 'SNUG', 'SOAK', 'SOAP', 'SOAR', 'SOCK', 'SODA', 'SOFA', 'SOFT', 'SOIL', 'SOLD',
+        'SOLE', 'SOLO', 'SOME', 'SONG', 'SOON', 'SOOT', 'SORE', 'SORT', 'SOUL', 'SOUP', 'SOUR',
+        'SPAM', 'SPAN', 'SPAR', 'SPAT', 'SPAY', 'SPEC', 'SPED', 'SPIN', 'SPIT', 'SPOT', 'SPUD',
+        'SPUN', 'SPUR', 'STAB', 'STAG', 'STAR', 'STAY', 'STEM', 'STEP', 'STEW', 'STIR', 'STOP',
+        'STOW', 'STUB', 'STUD', 'STUN', 'SUCH', 'SUDS', 'SUIT', 'SULK', 'SUNG', 'SUNK', 'SURE',
+        'SURF', 'SWAB', 'SWAG', 'SWAM', 'SWAN', 'SWAP', 'SWAT', 'SWAY', 'SWIM', 'SWUM', 'SYNC',
+        'TACK', 'TACT', 'TAIL', 'TAKE', 'TALE', 'TALK', 'TALL', 'TAME', 'TANG', 'TANK', 'TAPE',
+        'TAPS', 'TARE', 'TARN', 'TARP', 'TART', 'TASK', 'TAUT', 'TAXI', 'TEAM', 'TEAR', 'TEAS',
+        'TECH', 'TEED', 'TEEM', 'TEEN', 'TELL', 'TEMP', 'TEND', 'TENT', 'TERM', 'TEST', 'TEXT',
+        'THAN', 'THAT', 'THAW', 'THEE', 'THEM', 'THEN', 'THEY', 'THIN', 'THIS', 'THUD', 'THUG',
+        'THUS', 'TICK', 'TIDE', 'TIDY', 'TIED', 'TIER', 'TIFF', 'TILE', 'TILL', 'TILT', 'TIME',
+        'TINE', 'TINT', 'TINY', 'TIRE', 'TOAD', 'TOES', 'TOFU', 'TOIL', 'TOLD', 'TOLL', 'TOMB',
+        'TOME', 'TONE', 'TONG', 'TONY', 'TOOK', 'TOOL', 'TOOT', 'TOPS', 'TORE', 'TORN', 'TORT',
+        'TOSS', 'TOUR', 'TOUT', 'TOWN', 'TRAM', 'TRAP', 'TRAY', 'TREE', 'TREK', 'TRIM', 'TRIO',
+        'TRIP', 'TROD', 'TROT', 'TRUE', 'TUBE', 'TUCK', 'TUFT', 'TUNA', 'TUNE', 'TURF', 'TURN',
+        'TUSK', 'TUTU', 'TWIG', 'TWIN', 'TWIT', 'TYPE', 'TYPO', 'UGLY', 'UNDO', 'UNIT', 'UNTO',
+        'UPON', 'URGE', 'USED', 'USER', 'USES', 'VAIN', 'VALE', 'VAMP', 'VANE', 'VARY', 'VASE',
+        'VAST', 'VEAL', 'VEER', 'VEIL', 'VEIN', 'VEND', 'VENT', 'VERB', 'VERY', 'VEST', 'VETO',
+        'VIAL', 'VIBE', 'VICE', 'VIEW', 'VILE', 'VINE', 'VISA', 'VISE', 'VOID', 'VOTE', 'WADE',
+        'WAFT', 'WAGE', 'WAIL', 'WAIT', 'WAKE', 'WALK', 'WALL', 'WAND', 'WANE', 'WANT', 'WARD',
+        'WARE', 'WARM', 'WARN', 'WARP', 'WART', 'WARY', 'WASH', 'WASP', 'WAVE', 'WAVY', 'WAXY',
+        'WAYS', 'WEAK', 'WEAL', 'WEAN', 'WEAR', 'WEED', 'WEEK', 'WEEP', 'WEFT', 'WEIR', 'WELD',
+        'WELL', 'WELT', 'WENT', 'WEPT', 'WERE', 'WEST', 'WHAM', 'WHAT', 'WHEN', 'WHET', 'WHEY',
+        'WHIM', 'WHIP', 'WHIR', 'WHIT', 'WHIZ', 'WHOM', 'WICK', 'WIDE', 'WIFE', 'WILD', 'WILE',
+        'WILL', 'WILT', 'WILY', 'WIND', 'WINE', 'WING', 'WINK', 'WIPE', 'WIRE', 'WIRY', 'WISE',
+        'WISH', 'WISP', 'WITH', 'WOES', 'WOKE', 'WOLF', 'WOMB', 'WOOD', 'WOOF', 'WOOL', 'WOOS',
+        'WORD', 'WORE', 'WORK', 'WORM', 'WORN', 'WOVE', 'WRAP', 'WREN', 'WRIT', 'YANK', 'YARD',
+        'YARN', 'YAWN', 'YEAH', 'YEAR', 'YELL', 'YELP', 'YOKE', 'YOLK', 'YORE', 'YOUR', 'YOWL',
+        'YUCK', 'YULE', 'ZANY', 'ZEAL', 'ZERO', 'ZEST', 'ZINC', 'ZING', 'ZONE', 'ZOOM',
+        // 5-letter words
+        'ABOUT', 'ABOVE', 'ABUSE', 'ACTOR', 'ACUTE', 'ADMIT', 'ADOPT', 'ADULT', 'AFTER', 'AGAIN',
+        'AGENT', 'AGREE', 'AHEAD', 'ALARM', 'ALBUM', 'ALERT', 'ALIVE', 'ALLOW', 'ALONE', 'ALONG',
+        'ALTER', 'ANGER', 'ANGLE', 'ANGRY', 'APART', 'APPLE', 'APPLY', 'ARENA', 'ARGUE', 'ARISE',
+        'ARRAY', 'ASIDE', 'ASSET', 'AVOID', 'AWARD', 'AWARE', 'BADLY', 'BAKER', 'BASES', 'BASIC',
+        'BEACH', 'BEGAN', 'BEING', 'BELOW', 'BENCH', 'BILLY', 'BIRTH', 'BLACK', 'BLAME', 'BLIND',
+        'BLOCK', 'BLOOD', 'BOARD', 'BOOST', 'BOOTH', 'BOUND', 'BRAIN', 'BRAND', 'BREAD', 'BREAK',
+        'BREED', 'BRIEF', 'BRING', 'BROAD', 'BROKE', 'BROWN', 'BUILD', 'BUILT', 'BUYER', 'CABLE',
+        'CALIF', 'CARRY', 'CATCH', 'CAUSE', 'CHAIN', 'CHAIR', 'CHAOS', 'CHARM', 'CHART', 'CHASE',
+        'CHEAP', 'CHECK', 'CHEST', 'CHIEF', 'CHILD', 'CHINA', 'CHOSE', 'CIVIL', 'CLAIM', 'CLASS',
+        'CLEAN', 'CLEAR', 'CLICK', 'CLOCK', 'CLOSE', 'COACH', 'COAST', 'COULD', 'COUNT', 'COURT',
+        'COVER', 'CRAFT', 'CRASH', 'CRAZY', 'CREAM', 'CRIME', 'CROSS', 'CROWD', 'CROWN', 'CRUDE',
+        'CURVE', 'CYCLE', 'DAILY', 'DANCE', 'DATED', 'DEALT', 'DEATH', 'DEBUT', 'DELAY', 'DEPTH',
+        'DOING', 'DOUBT', 'DOZEN', 'DRAFT', 'DRAMA', 'DRANK', 'DRAWN', 'DREAM', 'DRESS', 'DRILL',
+        'DRINK', 'DRIVE', 'DROVE', 'DYING', 'EAGER', 'EARLY', 'EARTH', 'EIGHT', 'ELDER', 'ELECT',
+        'EMPTY', 'ENEMY', 'ENJOY', 'ENTER', 'ENTRY', 'EQUAL', 'ERROR', 'EVENT', 'EVERY', 'EXACT',
+        'EXIST', 'EXTRA', 'FAITH', 'FALSE', 'FAULT', 'FIBER', 'FIELD', 'FIFTH', 'FIFTY', 'FIGHT',
+        'FINAL', 'FIRST', 'FIXED', 'FLASH', 'FLEET', 'FLOOR', 'FLUID', 'FOCUS', 'FORCE', 'FORTH',
+        'FORTY', 'FORUM', 'FOUND', 'FRAME', 'FRANK', 'FRAUD', 'FRESH', 'FRONT', 'FRUIT', 'FULLY',
+        'FUNNY', 'GIANT', 'GIVEN', 'GLASS', 'GLOBE', 'GOING', 'GRACE', 'GRADE', 'GRAND', 'GRANT',
+        'GRASS', 'GRAVE', 'GREAT', 'GREEN', 'GROSS', 'GROUP', 'GROWN', 'GUARD', 'GUESS', 'GUEST',
+        'GUIDE', 'HAPPY', 'HARRY', 'HEART', 'HEAVY', 'HELLO', 'HENRY', 'HORSE', 'HOTEL', 'HOUSE',
+        'HUMAN', 'IDEAL', 'IMAGE', 'IMPLY', 'INDEX', 'INNER', 'INPUT', 'ISSUE', 'JAPAN', 'JIMMY',
+        'JOINT', 'JONES', 'JUDGE', 'KNOWN', 'LABEL', 'LARGE', 'LASER', 'LATER', 'LAUGH', 'LAYER',
+        'LEARN', 'LEASE', 'LEAST', 'LEAVE', 'LEGAL', 'LEMON', 'LEVEL', 'LEWIS', 'LIGHT', 'LIMIT',
+        'LINKS', 'LIVES', 'LOCAL', 'LOGIC', 'LOOSE', 'LOWER', 'LUCKY', 'LUNCH', 'LYING', 'MAGIC',
+        'MAJOR', 'MAKER', 'MARCH', 'MARIA', 'MATCH', 'MAYBE', 'MAYOR', 'MEANT', 'MEDIA', 'MIGHT',
+        'MINOR', 'MINUS', 'MIXED', 'MODEL', 'MONEY', 'MONTH', 'MORAL', 'MOTOR', 'MOUNT', 'MOUSE',
+        'MOUTH', 'MOVED', 'MOVIE', 'MUSIC', 'NEEDS', 'NEVER', 'NEWLY', 'NIGHT', 'NOISE', 'NORTH',
+        'NOTED', 'NOVEL', 'NURSE', 'OCCUR', 'OCEAN', 'OFFER', 'OFTEN', 'ORDER', 'OTHER', 'OUGHT',
+        'PAINT', 'PANEL', 'PAPER', 'PARIS', 'PARTY', 'PEACE', 'PETER', 'PHASE', 'PHONE', 'PHOTO',
+        'PIANO', 'PIECE', 'PILOT', 'PITCH', 'PLACE', 'PLAIN', 'PLANE', 'PLANT', 'PLATE', 'POINT',
+        'POUND', 'POWER', 'PRESS', 'PRICE', 'PRIDE', 'PRIME', 'PRINT', 'PRIOR', 'PRIZE', 'PROOF',
+        'PROUD', 'PROVE', 'QUEEN', 'QUICK', 'QUIET', 'QUITE', 'RADIO', 'RAISE', 'RANGE', 'RAPID',
+        'RATIO', 'REACH', 'READY', 'REFER', 'RELAX', 'REPLY', 'RIGHT', 'RIVER', 'ROBIN', 'ROCKY',
+        'ROGER', 'ROMAN', 'ROUGH', 'ROUND', 'ROUTE', 'ROYAL', 'RURAL', 'SCALE', 'SCENE', 'SCOPE',
+        'SCORE', 'SENSE', 'SERVE', 'SEVEN', 'SHALL', 'SHAPE', 'SHARE', 'SHARP', 'SHEET', 'SHELF',
+        'SHELL', 'SHIFT', 'SHINE', 'SHIRT', 'SHOCK', 'SHOOT', 'SHORT', 'SHOWN', 'SIGHT', 'SINCE',
+        'SIXTH', 'SIXTY', 'SIZED', 'SKILL', 'SLASH', 'SLEEP', 'SLIDE', 'SMALL', 'SMART', 'SMILE',
+        'SMITH', 'SMOKE', 'SOLID', 'SOLVE', 'SORRY', 'SOUND', 'SOUTH', 'SPACE', 'SPARE', 'SPEAK',
+        'SPEED', 'SPEND', 'SPENT', 'SPLIT', 'SPOKE', 'SPORT', 'STAFF', 'STAGE', 'STAKE', 'STAND',
+        'START', 'STATE', 'STEAM', 'STEEL', 'STICK', 'STILL', 'STOCK', 'STONE', 'STOOD', 'STORE',
+        'STORM', 'STORY', 'STRIP', 'STUCK', 'STUDY', 'STUFF', 'STYLE', 'SUGAR', 'SUITE', 'SUPER',
+        'SWEET', 'TABLE', 'TAKEN', 'TASTE', 'TAXES', 'TEACH', 'TEETH', 'TERRY', 'TEXAS', 'THANK',
+        'THEFT', 'THEIR', 'THEME', 'THERE', 'THESE', 'THICK', 'THING', 'THINK', 'THIRD', 'THOSE',
+        'THREE', 'THREW', 'THROW', 'TIGHT', 'TIMES', 'TITLE', 'TODAY', 'TOMMY', 'TOPIC', 'TOTAL',
+        'TOUCH', 'TOUGH', 'TOWER', 'TRACK', 'TRADE', 'TRAIN', 'TRASH', 'TREAT', 'TREND', 'TRIAL',
+        'TRIED', 'TRIES', 'TRICK', 'TRULY', 'TRUMP', 'TRUST', 'TRUTH', 'TWICE', 'UNDER', 'UNDUE',
+        'UNION', 'UNITY', 'UNTIL', 'UPPER', 'UPSET', 'URBAN', 'USAGE', 'USUAL', 'VALID', 'VALUE',
+        'VIDEO', 'VIRUS', 'VISIT', 'VITAL', 'VOCAL', 'VOICE', 'WASTE', 'WATCH', 'WATER', 'WHEEL',
+        'WHERE', 'WHICH', 'WHILE', 'WHITE', 'WHOLE', 'WHOSE', 'WOMAN', 'WOMEN', 'WORLD', 'WORRY',
+        'WORSE', 'WORST', 'WORTH', 'WOULD', 'WOUND', 'WRITE', 'WRONG', 'WROTE', 'YIELD', 'YOUNG',
+        'YOUTH'
+    ]);
+
+    // Main Game Class with robust error handling
+    class Game {
+        constructor() {
+            this.canvas = document.getElementById('gameCanvas');
+            this.ctx = this.canvas.getContext('2d');
+            this.currentState = 'loading';
+            this.score = 0;
+            this.collectedLetters = [];
+            this.foundWords = [];
+            this.currentWord = [];
+            this.dictionary = GAME_DICTIONARY;
+            this.snake = null;
+            this.letters = [];
+            this.gameTimer = null;
+            this.timeRemaining = CONFIG.COLLECTION_TIME;
+            this.lastUpdate = 0;
+            this.moveAccumulator = 0;
+            this.animationFrame = null;
+            
+            this.initializeGame();
+        }
+
+        async initializeGame() {
+            try {
+                // Set up event listeners
+                this.setupEventListeners();
+                
+                // Initialize complete - show menu
+                this.setState('menu');
+            } catch (error) {
+                console.error('Game initialization failed:', error);
+                alert('Failed to initialize game. Please refresh the page.');
+            }
+        }
+
+        setupEventListeners() {
+            // Keyboard controls
+            document.addEventListener('keydown', (e) => this.handleKeyPress(e));
+            
+            // Touch controls with proper event handling
+            let touchStartX = null;
+            let touchStartY = null;
+            
+            this.canvas.addEventListener('touchstart', (e) => {
+                const touch = e.touches[0];
+                touchStartX = touch.clientX;
+                touchStartY = touch.clientY;
+                e.preventDefault();
+            }, { passive: false });
+            
+            this.canvas.addEventListener('touchend', (e) => {
+                if (!touchStartX || !touchStartY || this.currentState !== 'snake') return;
+                
+                const touch = e.changedTouches[0];
+                const dx = touch.clientX - touchStartX;
+                const dy = touch.clientY - touchStartY;
+                
+                const minSwipeDistance = 30;
+                
+                if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > minSwipeDistance) {
+                    this.snake.setDirection(dx > 0 ? 'RIGHT' : 'LEFT');
+                } else if (Math.abs(dy) > minSwipeDistance) {
+                    this.snake.setDirection(dy > 0 ? 'DOWN' : 'UP');
+                }
+                
+                touchStartX = null;
+                touchStartY = null;
+                e.preventDefault();
+            }, { passive: false });
+            
+            // Prevent scrolling
+            this.canvas.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+        }
+
+        handleKeyPress(e) {
+            if (this.currentState === 'snake') {
+                const keyMap = {
+                    'ArrowUp': 'UP', 'w': 'UP', 'W': 'UP',
+                    'ArrowDown': 'DOWN', 's': 'DOWN', 'S': 'DOWN',
+                    'ArrowLeft': 'LEFT', 'a': 'LEFT', 'A': 'LEFT',
+                    'ArrowRight': 'RIGHT', 'd': 'RIGHT', 'D': 'RIGHT'
+                };
+                
+                if (keyMap[e.key]) {
+                    this.snake.setDirection(keyMap[e.key]);
+                    e.preventDefault();
+                }
+            }
+        }
+
+        setState(newState) {
+            // Hide all states
+            document.querySelectorAll('.game-state, #snakePhase, #wordPhase, #loadingState').forEach(el => {
+                el.classList.add('hidden');
+            });
+            
+            // Show new state
+            this.currentState = newState;
+            const stateMap = {
+                'menu': 'menuState',
+                'snake': 'snakePhase',
+                'word': 'wordPhase',
+                'gameOver': 'gameOverState',
+                'loading': 'loadingState'
+            };
+            
+            const element = document.getElementById(stateMap[newState]);
+            if (element) {
+                element.classList.remove('hidden');
+            }
+        }
+
+        startGame() {
+            this.score = 0;
+            this.collectedLetters = [];
+            this.foundWords = [];
+            this.currentWord = [];
+            this.timeRemaining = CONFIG.COLLECTION_TIME;
+            
+            // Verify canvas is accessible
+            if (!this.canvas || !this.ctx) {
+                alert('Game initialization failed. Please refresh the page.');
+                return;
+            }
+            
+            this.initSnakePhase();
+            this.setState('snake');
+        }
+
+        initSnakePhase() {
+            this.snake = new Snake();
+            this.letters = [];
+            this.spawnLetters();
+            
+            // Reset timer color
+            document.getElementById('timer').style.color = 'inherit';
+            
+            // Start game timer
+            this.updateTimer();
+            this.gameTimer = setInterval(() => {
+                this.timeRemaining--;
+                this.updateTimer();
+                
+                if (this.timeRemaining <= 0) {
+                    this.endSnakePhase();
+                }
+            }, 1000);
+            
+            // Initialize timing with explicit values
+            this.lastUpdate = 0;
+            this.moveAccumulator = 0;
+            
+            // Start game loop with immediate invocation
+            requestAnimationFrame((time) => this.gameLoop(time));
+        }
+
+        spawnLetters() {
+            const newLetterCount = CONFIG.LETTER_COUNT - this.letters.length;
+            
+            // Generate weighted letter pool with guaranteed vowels
+            const letterPool = [];
+            const vowels = ['A', 'E', 'I', 'O', 'U'];
+            
+            // Ensure at least 2 vowels
+            for (let i = 0; i < Math.min(2, newLetterCount); i++) {
+                letterPool.push(vowels[Math.floor(Math.random() * vowels.length)]);
+            }
+            
+            // Fill rest with weighted distribution
+            for (const [letter, freq] of Object.entries(CONFIG.LETTER_FREQUENCIES)) {
+                const count = Math.ceil(freq / 2);
+                for (let i = 0; i < count; i++) {
+                    letterPool.push(letter);
+                }
+            }
+            
+            // Spawn new letters
+            for (let i = 0; i < newLetterCount; i++) {
+                let position;
+                let attempts = 0;
+                
+                do {
+                    position = {
+                        x: Math.floor(Math.random() * CONFIG.GRID_SIZE),
+                        y: Math.floor(Math.random() * CONFIG.GRID_SIZE)
+                    };
+                    attempts++;
+                } while (this.isPositionOccupied(position) && attempts < 50);
+                
+                if (attempts < 50) {
+                    const letter = letterPool[Math.floor(Math.random() * letterPool.length)];
+                    this.letters.push({
+                        x: position.x,
+                        y: position.y,
+                        letter: letter,
+                        points: CONFIG.LETTER_POINTS[letter] || 1
+                    });
+                }
+            }
+        }
+
+        isPositionOccupied(pos) {
+            return this.snake.segments.some(seg => seg.x === pos.x && seg.y === pos.y) ||
+                   this.letters.some(letter => letter.x === pos.x && letter.y === pos.y);
+        }
+
+        gameLoop(currentTime) {
+            // Robust initialization check
+            if (this.lastUpdate === 0) {
+                this.lastUpdate = currentTime;
+                this.moveAccumulator = 0;
+            }
+            
+            // Calculate bounded deltaTime to prevent timing spikes
+            const deltaTime = Math.min(currentTime - this.lastUpdate, 100);
+            this.lastUpdate = currentTime;
+            
+            // Accumulate time for movement
+            this.moveAccumulator += deltaTime;
+            
+            // Move snake at fixed intervals
+            if (this.moveAccumulator >= CONFIG.SNAKE_SPEED) {
+                this.snake.move();
+                this.checkCollisions();
+                this.moveAccumulator -= CONFIG.SNAKE_SPEED;
+            }
+            
+            // Always render
+            this.render();
+            
+            // Continue loop if still in snake phase
+            if (this.currentState === 'snake') {
+                this.animationFrame = requestAnimationFrame((time) => this.gameLoop(time));
+            }
+        }
+
+        checkCollisions() {
+            const head = this.snake.segments[0];
+            
+            // Letter collection
+            for (let i = this.letters.length - 1; i >= 0; i--) {
+                const letter = this.letters[i];
+                if (head.x === letter.x && head.y === letter.y) {
+                    this.collectLetter(letter);
+                    this.letters.splice(i, 1);
+                    this.snake.grow();
+                    
+                    // Spawn new letters
+                    if (this.letters.length < CONFIG.LETTER_COUNT) {
+                        this.spawnLetters();
+                    }
+                    break;
+                }
+            }
+            
+            // Self collision
+            for (let i = 1; i < this.snake.segments.length; i++) {
+                if (head.x === this.snake.segments[i].x && head.y === this.snake.segments[i].y) {
+                    this.endSnakePhase();
+                    break;
+                }
+            }
+        }
+
+        collectLetter(letter) {
+            this.collectedLetters.push(letter.letter);
+            this.score += letter.points * 10;
+            this.updateHUD();
+            
+            // Visual feedback
+            this.showScorePopup(letter.x, letter.y, `+${letter.points * 10}`);
+        }
+
+        showScorePopup(gridX, gridY, text) {
+            const popup = document.createElement('div');
+            popup.className = 'score-popup';
+            popup.textContent = text;
+            
+            if (this.currentState === 'snake' && this.canvas) {
+                const rect = this.canvas.getBoundingClientRect();
+                popup.style.left = `${rect.left + gridX * CONFIG.CELL_SIZE + CONFIG.CELL_SIZE / 2}px`;
+                popup.style.top = `${rect.top + gridY * CONFIG.CELL_SIZE + CONFIG.CELL_SIZE / 2}px`;
+            } else {
+                // For word phase, position in center of screen
+                popup.style.left = '50%';
+                popup.style.top = '40%';
+            }
+            
+            document.body.appendChild(popup);
+            setTimeout(() => popup.remove(), 1000);
+        }
+
+        render() {
+            // Clear canvas
+            this.ctx.fillStyle = '#FFFFFF';
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            
+            // Draw grid
+            this.ctx.strokeStyle = '#E9ECEF';
+            this.ctx.lineWidth = 1;
+            for (let i = 0; i <= CONFIG.GRID_SIZE; i++) {
+                this.ctx.beginPath();
+                this.ctx.moveTo(i * CONFIG.CELL_SIZE, 0);
+                this.ctx.lineTo(i * CONFIG.CELL_SIZE, this.canvas.height);
+                this.ctx.stroke();
+                
+                this.ctx.beginPath();
+                this.ctx.moveTo(0, i * CONFIG.CELL_SIZE);
+                this.ctx.lineTo(this.canvas.width, i * CONFIG.CELL_SIZE);
+                this.ctx.stroke();
+            }
+            
+            // Draw letters
+            this.letters.forEach(letter => {
+                // Letter background
+                this.ctx.fillStyle = '#FFF3CD';
+                this.ctx.fillRect(
+                    letter.x * CONFIG.CELL_SIZE + 2,
+                    letter.y * CONFIG.CELL_SIZE + 2,
+                    CONFIG.CELL_SIZE - 4,
+                    CONFIG.CELL_SIZE - 4
+                );
+                
+                // Letter text
+                this.ctx.fillStyle = '#856404';
+                this.ctx.font = 'bold 18px Arial';
+                this.ctx.textAlign = 'center';
+                this.ctx.textBaseline = 'middle';
+                this.ctx.fillText(
+                    letter.letter,
+                    letter.x * CONFIG.CELL_SIZE + CONFIG.CELL_SIZE / 2,
+                    letter.y * CONFIG.CELL_SIZE + CONFIG.CELL_SIZE / 2
+                );
+                
+                // Points
+                this.ctx.font = '10px Arial';
+                this.ctx.fillText(
+                    letter.points.toString(),
+                    letter.x * CONFIG.CELL_SIZE + CONFIG.CELL_SIZE - 8,
+                    letter.y * CONFIG.CELL_SIZE + CONFIG.CELL_SIZE - 8
+                );
+            });
+            
+            // Draw snake
+            this.snake.render(this.ctx);
+        }
+
+        updateHUD() {
+            document.getElementById('score').textContent = this.score;
+            document.getElementById('letterCount').textContent = this.collectedLetters.length;
+        }
+
+        updateTimer() {
+            document.getElementById('timer').textContent = this.timeRemaining;
+            if (this.timeRemaining <= 5) {
+                document.getElementById('timer').style.color = '#FF6B6B';
+            }
+        }
+
+        endSnakePhase() {
+            clearInterval(this.gameTimer);
+            cancelAnimationFrame(this.animationFrame);
+            
+            if (this.collectedLetters.length >= 3) {
+                this.initWordPhase();
+                this.setState('word');
+            } else {
+                this.gameOver();
+            }
+        }
+
+        initWordPhase() {
+            const letterBank = document.getElementById('letterBank');
+            letterBank.innerHTML = '';
+            
+            // Create letter tiles with proper event binding
+            this.collectedLetters.forEach((letter, index) => {
+                const tile = document.createElement('div');
+                tile.className = 'letter-tile';
+                tile.dataset.index = index;
+                
+                // Add letter text
+                const letterText = document.createElement('span');
+                letterText.textContent = letter;
+                letterText.style.fontSize = '1.4em';
+                tile.appendChild(letterText);
+                
+                // Add point value
+                const points = document.createElement('span');
+                points.className = 'letter-points';
+                points.textContent = CONFIG.LETTER_POINTS[letter] || 1;
+                tile.appendChild(points);
+                
+                // Use closure to capture the correct context
+                tile.onclick = () => {
+                    if (gameInstance) {
+                        gameInstance.addLetterToWord(letter, index);
+                    }
+                };
+                
+                letterBank.appendChild(tile);
+            });
+            
+            this.updateWordDisplay();
+            this.updateFoundWords();
+        }
+
+        addLetterToWord(letter, index) {
+            if (this.currentWord.length >= 5) return;
+            
+            const tile = document.querySelector(`[data-index="${index}"]`);
+            if (tile.classList.contains('used')) return;
+            
+            this.currentWord.push({ letter, index });
+            tile.classList.add('used');
+            this.updateWordDisplay();
+        }
+
+        clearWord() {
+            this.currentWord.forEach(({ index }) => {
+                const tile = document.querySelector(`[data-index="${index}"]`);
+                if (tile) tile.classList.remove('used');
+            });
+            this.currentWord = [];
+            this.updateWordDisplay();
+        }
+
+        updateWordDisplay() {
+            const display = document.getElementById('currentWord');
+            display.innerHTML = '';
+            
+            for (let i = 0; i < 5; i++) {
+                const slot = document.createElement('div');
+                slot.className = 'word-slot';
+                if (this.currentWord[i]) {
+                    slot.textContent = this.currentWord[i].letter;
+                }
+                display.appendChild(slot);
+            }
+        }
+
+        submitWord() {
+            if (this.currentWord.length < 3) {
+                alert('Words must be at least 3 letters long!');
+                return;
+            }
+            
+            const word = this.currentWord.map(({ letter }) => letter).join('');
+            
+            if (!this.dictionary.has(word)) {
+                alert('Not a valid word!');
+                return;
+            }
+            
+            if (this.foundWords.some(w => w.word === word)) {
+                alert('You already found this word!');
+                return;
+            }
+            
+            // Calculate points
+            let points = 0;
+            this.currentWord.forEach(({ letter }) => {
+                points += (CONFIG.LETTER_POINTS[letter] || 1) * 10;
+            });
+            
+            // Length bonus
+            points += word.length * 50;
+            
+            this.foundWords.push({ word, points });
+            this.score += points;
+            this.updateHUD();
+            this.updateFoundWords();
+            
+            // Show success feedback
+            this.showScorePopup(0, 0, `+${points}!`);
+            
+            // Clear current word
+            this.clearWord();
+        }
+
+        updateFoundWords() {
+            const list = document.getElementById('wordsList');
+            list.innerHTML = '';
+            
+            this.foundWords.forEach(({ word, points }) => {
+                const wordDiv = document.createElement('div');
+                wordDiv.className = 'found-word';
+                wordDiv.innerHTML = `${word} <span class="points">+${points}</span>`;
+                list.appendChild(wordDiv);
+            });
+        }
+
+        endWordPhase() {
+            // Option to continue playing more rounds
+            if (confirm('Round complete! Would you like to play another round?')) {
+                this.timeRemaining = CONFIG.COLLECTION_TIME;
+                this.initSnakePhase();
+                this.setState('snake');
+            } else {
+                this.gameOver();
+            }
+        }
+
+        gameOver() {
+            document.getElementById('finalScore').textContent = this.score;
+            document.getElementById('wordsFound').textContent = this.foundWords.length;
+            document.getElementById('lettersCollected').textContent = this.collectedLetters.length;
+            
+            // Save high score
+            const highScore = parseInt(localStorage.getItem('highScore') || '0');
+            if (this.score > highScore) {
+                localStorage.setItem('highScore', this.score.toString());
+            }
+            
+            this.setState('gameOver');
+        }
+
+        resetGame() {
+            this.setState('menu');
+        }
+    }
+
+    // Snake Class with smooth movement
+    class Snake {
+        constructor() {
+            this.segments = [{ x: 10, y: 10 }];
+            this.direction = { x: 1, y: 0 };
+            this.nextDirection = { x: 1, y: 0 };
+            this.growing = false;
+        }
+
+        setDirection(dir) {
+            const directions = {
+                'UP': { x: 0, y: -1 },
+                'DOWN': { x: 0, y: 1 },
+                'LEFT': { x: -1, y: 0 },
+                'RIGHT': { x: 1, y: 0 }
+            };
+            
+            const newDir = directions[dir];
+            if (!newDir) return;
+            
+            // Prevent reverse direction
+            if (this.direction.x === -newDir.x && this.direction.y === -newDir.y) {
+                return;
+            }
+            
+            this.nextDirection = newDir;
+        }
+
+        move() {
+            this.direction = this.nextDirection;
+            
+            const head = { ...this.segments[0] };
+            head.x += this.direction.x;
+            head.y += this.direction.y;
+            
+            // Check wall collision (don't wrap, just check bounds)
+            if (head.x < 0 || head.x >= CONFIG.GRID_SIZE || 
+                head.y < 0 || head.y >= CONFIG.GRID_SIZE) {
+                // Hit wall - trigger game over
+                if (window.gameInstance) {
+                    window.gameInstance.endSnakePhase();
+                }
+                return;
+            }
+            
+            this.segments.unshift(head);
+            
+            if (!this.growing) {
+                this.segments.pop();
+            } else {
+                this.growing = false;
+            }
+        }
+
+        grow() {
+            this.growing = true;
+        }
+
+        render(ctx) {
+            this.segments.forEach((segment, index) => {
+                ctx.fillStyle = index === 0 ? '#159A7F' : '#1BB295';
+                
+                ctx.fillRect(
+                    segment.x * CONFIG.CELL_SIZE + 2,
+                    segment.y * CONFIG.CELL_SIZE + 2,
+                    CONFIG.CELL_SIZE - 4,
+                    CONFIG.CELL_SIZE - 4
+                );
+                
+                // Add eyes to head
+                if (index === 0) {
+                    ctx.fillStyle = 'white';
+                    const eyeSize = 4;
+                    const eyeOffset = 6;
+                    
+                    // Position eyes based on direction
+                    if (this.direction.x === 1) { // Right
+                        ctx.fillRect(
+                            segment.x * CONFIG.CELL_SIZE + CONFIG.CELL_SIZE - eyeOffset - eyeSize,
+                            segment.y * CONFIG.CELL_SIZE + 6,
+                            eyeSize, eyeSize
+                        );
+                        ctx.fillRect(
+                            segment.x * CONFIG.CELL_SIZE + CONFIG.CELL_SIZE - eyeOffset - eyeSize,
+                            segment.y * CONFIG.CELL_SIZE + CONFIG.CELL_SIZE - 10,
+                            eyeSize, eyeSize
+                        );
+                    } else if (this.direction.x === -1) { // Left
+                        ctx.fillRect(
+                            segment.x * CONFIG.CELL_SIZE + eyeOffset,
+                            segment.y * CONFIG.CELL_SIZE + 6,
+                            eyeSize, eyeSize
+                        );
+                        ctx.fillRect(
+                            segment.x * CONFIG.CELL_SIZE + eyeOffset,
+                            segment.y * CONFIG.CELL_SIZE + CONFIG.CELL_SIZE - 10,
+                            eyeSize, eyeSize
+                        );
+                    } else if (this.direction.y === 1) { // Down
+                        ctx.fillRect(
+                            segment.x * CONFIG.CELL_SIZE + 6,
+                            segment.y * CONFIG.CELL_SIZE + CONFIG.CELL_SIZE - eyeOffset - eyeSize,
+                            eyeSize, eyeSize
+                        );
+                        ctx.fillRect(
+                            segment.x * CONFIG.CELL_SIZE + CONFIG.CELL_SIZE - 10,
+                            segment.y * CONFIG.CELL_SIZE + CONFIG.CELL_SIZE - eyeOffset - eyeSize,
+                            eyeSize, eyeSize
+                        );
+                    } else { // Up
+                        ctx.fillRect(
+                            segment.x * CONFIG.CELL_SIZE + 6,
+                            segment.y * CONFIG.CELL_SIZE + eyeOffset,
+                            eyeSize, eyeSize
+                        );
+                        ctx.fillRect(
+                            segment.x * CONFIG.CELL_SIZE + CONFIG.CELL_SIZE - 10,
+                            segment.y * CONFIG.CELL_SIZE + eyeOffset,
+                            eyeSize, eyeSize
+                        );
+                    }
+                }
+            });
+        }
+    }
+
+    // Global game instance
+    let gameInstance = null;
+
+    // Global function delegates with defensive programming
+    function startGame() {
+        if (!gameInstance) {
+            console.error('Game not initialized');
+            return;
+        }
+        gameInstance.startGame();
+    }
+
+    function clearWord() {
+        if (!gameInstance) {
+            console.error('Game not initialized');
+            return;
+        }
+        gameInstance.clearWord();
+    }
+
+    function submitWord() {
+        if (!gameInstance) {
+            console.error('Game not initialized');
+            return;
+        }
+        gameInstance.submitWord();
+    }
+
+    function endWordPhase() {
+        if (!gameInstance) {
+            console.error('Game not initialized');
+            return;
+        }
+        gameInstance.endWordPhase();
+    }
+
+    function resetGame() {
+        if (!gameInstance) {
+            console.error('Game not initialized');
+            return;
+        }
+        gameInstance.resetGame();
+    }
+
+    // Initialize game when DOM is ready with proper global exposure
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            gameInstance = new Game();
+        });
+    } else {
+        gameInstance = new Game();
+    }
+</script>
+```
+
+</body>
+</html>
