@@ -1,0 +1,575 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Ragdoll Stickman Physics Playground</title>
+<style>
+  :root { color-scheme: dark light; }
+  html, body { margin: 0; height: 100%; }
+  body { background: #0f0f13; color: #e8e8e8; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
+  #wrap { display: grid; grid-template-rows: auto 1fr auto; height: 100%; }
+  header { padding: .6rem 1rem; background: #14141c; border-bottom: 1px solid #22232b; }
+  header h1 { margin: 0; font-size: 1.05rem; letter-spacing: .3px; }
+  canvas { display: block; width: 100%; height: 100%; background: radial-gradient(1200px 700px at 70% -10%, #1b1c27, #0f0f13); cursor: grab; }
+  canvas:active { cursor: grabbing; }
+  footer { padding: .5rem 1rem; background: #14141c; border-top: 1px solid #22232b; font-size: .9rem; line-height: 1.35; }
+  kbd { background:#22252e; border:1px solid #2b2e38; border-bottom-color:#222532; border-radius:4px; padding: 1px 6px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:.85em; }
+  .pill { display:inline-block; padding:.2rem .5rem; border:1px solid #2b2e38; border-radius:999px; background:#171821; font-size:.8rem; margin-right:.35rem; }
+  .right { float: right; opacity:.8; font-size:.85rem; }
+  a { color:#8db4ff; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <header>
+    <h1>Ragdoll Stickman Physics Playground <span class="right">Drag to grab • Click empty space to spawn boxes • Toss with explosions (<kbd>F</kbd>)</span></h1>
+  </header>
+  <canvas id="c"></canvas>
+  <footer>
+    <span class="pill"><kbd>G</kbd> toggle gravity</span>
+    <span class="pill"><kbd>P</kbd> pause</span>
+    <span class="pill"><kbd>R</kbd> reset doll</span>
+    <span class="pill"><kbd>F</kbd> explosion @ cursor</span>
+    <span class="pill"><kbd>B</kbd> clear boxes</span>
+    <span class="pill"><kbd>H</kbd> hide/show constraints</span>
+    <span class="pill">Drag limbs to torture 😈</span>
+  </footer>
+</div>
+
+<script>
+(() => {
+  // ===================== Canvas & HiDPI =====================
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let DPR = Math.max(1, window.devicePixelRatio || 1);
+  let W = 0, H = 0;
+
+  function resize() {
+    const rect = canvas.getBoundingClientRect();
+    W = Math.max(320, Math.floor(rect.width  * DPR));
+    H = Math.max(320, Math.floor(rect.height * DPR));
+    canvas.width = W;
+    canvas.height = H;
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.scale(DPR, DPR);
+  }
+  window.addEventListener('resize', resize, {passive:true});
+  resize();
+
+  // ===================== Mini Physics Engine =====================
+  // Basic Verlet particle
+  class Particle {
+    constructor(x,y, pinned=false) {
+      this.x = x; this.y = y;
+      this.px = x; this.py = y; // previous (for Verlet)
+      this.ax = 0; this.ay = 0;
+      this.pinned = pinned;
+      this.radius = 6;
+      this.mass = 1;
+      this.grabbable = true;
+    }
+    addForce(fx, fy) { this.ax += fx / this.mass; this.ay += fy / this.mass; }
+    integrate(dt, damping) {
+      if (this.pinned) { this.ax = this.ay = 0; return; }
+      const nx = this.x + (this.x - this.px) * damping + this.ax * dt*dt;
+      const ny = this.y + (this.y - this.py) * damping + this.ay * dt*dt;
+      this.px = this.x; this.py = this.y;
+      this.x = nx; this.y = ny;
+      this.ax = 0; this.ay = 0;
+    }
+  }
+
+  // Distance constraint (sticks/bones)
+  class Constraint {
+    constructor(a, b, rest, stiff=1.0) {
+      this.a = a; this.b = b;
+      this.rest = rest;
+      this.stiff = Math.min(Math.max(stiff, 0), 1);
+    }
+    satisfy() {
+      const ax = this.a.x, ay = this.a.y;
+      const bx = this.b.x, by = this.b.y;
+      let dx = bx - ax, dy = by - ay;
+      let dist = Math.hypot(dx, dy) || 1e-6;
+      const diff = (dist - this.rest) / dist;
+      const invA = this.a.pinned ? 0 : 1 / this.a.mass;
+      const invB = this.b.pinned ? 0 : 1 / this.b.mass;
+      const invSum = invA + invB || 1e-6;
+      const factorA = this.stiff * invA / invSum;
+      const factorB = this.stiff * invB / invSum;
+      const offx = dx * diff;
+      const offy = dy * diff;
+      if (!this.a.pinned) { this.a.x += offx * factorA; this.a.y += offy * factorA; }
+      if (!this.b.pinned) { this.b.x -= offx * factorB; this.b.y -= offy * factorB; }
+    }
+  }
+
+  // Axis-aligned box (simple props to bonk into doll)
+  class Box {
+    constructor(x,y,w,h) {
+      this.x = x; this.y = y; this.w = w; this.h = h;
+      this.vx = 0; this.vy = 0;
+      this.bounciness = 0.15;
+      this.friction = 0.6;
+    }
+    update(dt, gravityOn) {
+      if (gravityOn) this.vy += 2000 * dt;
+      this.x += this.vx * dt;
+      this.y += this.vy * dt;
+
+      // World bounds
+      if (this.x < 0) { this.x = 0; this.vx *= -this.bounciness; }
+      if (this.x + this.w > canvas.width/DPR) { this.x = canvas.width/DPR - this.w; this.vx *= -this.bounciness; }
+      if (this.y < 0) { this.y = 0; this.vy *= -this.bounciness; }
+      if (this.y + this.h > canvas.height/DPR) {
+        this.y = canvas.height/DPR - this.h; 
+        this.vy *= -this.bounciness;
+        this.vx *= (1 - 0.06); // ground friction
+      }
+    }
+    // Broad, naive collision vs. particles: push particle out of box
+    collideParticle(p) {
+      const r = 4; // soften
+      const px = p.x, py = p.y;
+      if (px > this.x - r && px < this.x + this.w + r && py > this.y - r && py < this.y + this.h + r) {
+        // compute penetration along min axis
+        const left   = Math.abs(px - (this.x - r));
+        const right  = Math.abs((this.x + this.w + r) - px);
+        const top    = Math.abs(py - (this.y - r));
+        const bottom = Math.abs((this.y + this.h + r) - py);
+        const minPen = Math.min(left, right, top, bottom);
+        const k = 0.9; // separation factor
+        if (minPen === left)   { p.x = this.x - r; p.px = p.x; }
+        if (minPen === right)  { p.x = this.x + this.w + r; p.px = p.x; }
+        if (minPen === top)    { p.y = this.y - r; p.py = p.y; }
+        if (minPen === bottom) { p.y = this.y + this.h + r; p.py = p.y; }
+        // impulse-ish velocity tweak
+        const vx = p.x - p.px, vy = p.y - p.py;
+        p.px = p.x + vx * (1 - k);
+        p.py = p.y + vy * (1 - k);
+      }
+    }
+    draw(g) {
+      g.lineWidth = 2;
+      g.strokeStyle = 'rgba(220,220,255,.6)';
+      g.fillStyle = 'rgba(120,140,220,.15)';
+      g.beginPath();
+      g.rect(this.x, this.y, this.w, this.h);
+      g.fill(); g.stroke();
+    }
+  }
+
+  // ===================== World & Ragdoll =====================
+  const world = {
+    particles: [],
+    constraints: [],
+    boxes: [],
+    iterations: 8,
+    damping: 0.995,
+    gravityOn: true,
+    paused: false,
+    showConstraints: true,
+  };
+
+  function addParticle(x,y, pinned=false) {
+    const p = new Particle(x,y,pinned);
+    world.particles.push(p);
+    return p;
+  }
+  function addConstraint(a,b,rest,stiff=0.9) {
+    const c = new Constraint(a,b,rest,stiff);
+    world.constraints.push(c);
+    return c;
+  }
+
+  function makeStickman(cx, cy, scale=1) {
+    world.particles = [];
+    world.constraints = [];
+
+    // proportions (roughly human-ish)
+    const headR = 14 * scale;
+    const neckLen = 18 * scale;
+    const torsoLen = 48 * scale;
+    const hipWidth = 30 * scale;
+    const shoulderWidth = 44 * scale;
+    const upperArm = 34 * scale;
+    const foreArm  = 36 * scale;
+    const upperLeg = 46 * scale;
+    const lowerLeg = 50 * scale;
+
+    // nodes
+    const head = addParticle(cx, cy - (neckLen + headR*2));
+    head.radius = headR;
+    const neck = addParticle(cx, cy - neckLen);
+    const shoulderL = addParticle(cx - shoulderWidth/2, cy - neckLen);
+    const shoulderR = addParticle(cx + shoulderWidth/2, cy - neckLen);
+    const chest = addParticle(cx, cy);
+    const hipL = addParticle(cx - hipWidth/2, cy + torsoLen);
+    const hipR = addParticle(cx + hipWidth/2, cy + torsoLen);
+
+    const elbowL = addParticle(shoulderL.x - upperArm, shoulderL.y + 6);
+    const wristL = addParticle(elbowL.x - foreArm, elbowL.y + 8);
+    const elbowR = addParticle(shoulderR.x + upperArm, shoulderR.y + 6);
+    const wristR = addParticle(elbowR.x + foreArm, elbowR.y + 8);
+
+    const kneeL = addParticle(hipL.x - 4, hipL.y + upperLeg);
+    const ankleL = addParticle(kneeL.x - 2, kneeL.y + lowerLeg);
+    const kneeR = addParticle(hipR.x + 4, hipR.y + upperLeg);
+    const ankleR = addParticle(kneeR.x + 2, kneeR.y + lowerLeg);
+
+    // bones (distance constraints)
+    const bones = [];
+    const link = (a,b,stiff=0.9) => {
+      const rest = Math.hypot(b.x-a.x, b.y-a.y);
+      bones.push(addConstraint(a,b,rest,stiff));
+    };
+
+    // spine
+    link(head, neck, 0.45);
+    link(neck, chest, 0.9);
+    link(chest, hipL, 0.9);
+    link(chest, hipR, 0.9);
+    link(hipL, hipR, 0.9);
+
+    // shoulders
+    link(shoulderL, neck, 0.8);
+    link(shoulderR, neck, 0.8);
+    link(shoulderL, shoulderR, 0.7);
+
+    // arms
+    link(shoulderL, elbowL, 0.9);
+    link(elbowL, wristL, 0.9);
+    link(shoulderR, elbowR, 0.9);
+    link(elbowR, wristR, 0.9);
+
+    // legs
+    link(hipL, kneeL, 0.9);
+    link(kneeL, ankleL, 0.9);
+    link(hipR, kneeR, 0.9);
+    link(kneeR, ankleR, 0.9);
+
+    // shape-preserving extra links (to reduce spaghetti)
+    link(neck, hipL, 0.15);
+    link(neck, hipR, 0.15);
+    link(shoulderL, chest, 0.6);
+    link(shoulderR, chest, 0.6);
+    link(wristL, chest, 0.05);
+    link(wristR, chest, 0.05);
+    link(kneeL, kneeR, 0.05);
+    link(ankleL, ankleR, 0.05);
+
+    // Gentle air drag by mass tweak
+    world.particles.forEach(p => p.mass = (p === head ? 1.2 : 1));
+
+    // Return some handles for fun
+    return {head, neck, chest, shoulderL, shoulderR, elbowL, elbowR, wristL, wristR, hipL, hipR, kneeL, kneeR, ankleL, ankleR};
+  }
+
+  // ===================== Input (mouse/touch) =====================
+  let mouse = { x: 0, y: 0, down: false, grabbed: null, grabOffset: {x:0,y:0} };
+  function toCanvasCoords(evt) {
+    const rect = canvas.getBoundingClientRect();
+    let x, y;
+    if (evt.touches && evt.touches[0]) {
+      x = (evt.touches[0].clientX - rect.left);
+      y = (evt.touches[0].clientY - rect.top);
+    } else {
+      x = (evt.clientX - rect.left);
+      y = (evt.clientY - rect.top);
+    }
+    return { x, y };
+  }
+
+  function pickParticle(x, y) {
+    // choose nearest within radius
+    let best = null, bestD = 18;
+    const cx = x, cy = y;
+    for (const p of world.particles) {
+      if (!p.grabbable) continue;
+      const d = Math.hypot(p.x - cx, p.y - cy);
+      if (d < bestD) { bestD = d; best = p; }
+    }
+    return best;
+  }
+
+  canvas.addEventListener('mousedown', (e) => {
+    mouse.down = true;
+    const {x,y} = toCanvasCoords(e);
+    mouse.x = x; mouse.y = y;
+    const p = pickParticle(x, y);
+    if (p) {
+      mouse.grabbed = p;
+      // "pin" via Verlet trick: put previous point to current to damp velocity
+      p.px = p.x; p.py = p.y;
+      mouse.grabOffset.x = p.x - x;
+      mouse.grabOffset.y = p.y - y;
+    } else {
+      spawnBoxNear(x, y);
+    }
+  });
+  window.addEventListener('mousemove', (e) => {
+    const {x,y} = toCanvasCoords(e);
+    mouse.x = x; mouse.y = y;
+  }, {passive:true});
+  window.addEventListener('mouseup', () => {
+    mouse.down = false;
+    mouse.grabbed = null;
+  }, {passive:true});
+
+  // Touch support
+  canvas.addEventListener('touchstart', (e) => {
+    const {x,y} = toCanvasCoords(e);
+    mouse.down = true; mouse.x = x; mouse.y = y;
+    const p = pickParticle(x, y);
+    if (p) {
+      mouse.grabbed = p; p.px = p.x; p.py = p.y;
+      mouse.grabOffset.x = p.x - x;
+      mouse.grabOffset.y = p.y - y;
+    } else {
+      spawnBoxNear(x, y);
+    }
+  }, {passive:true});
+  canvas.addEventListener('touchmove', (e) => {
+    const {x,y} = toCanvasCoords(e);
+    mouse.x = x; mouse.y = y;
+  }, {passive:true});
+  canvas.addEventListener('touchend', () => {
+    mouse.down = false; mouse.grabbed = null;
+  }, {passive:true});
+
+  // ===================== World helpers =====================
+  function spawnBoxNear(x,y) {
+    const w = 30 + Math.random()*60;
+    const h = 30 + Math.random()*60;
+    const b = new Box(x - w/2, y - h/2, w, h);
+    b.vx = (Math.random() - 0.5) * 800;
+    b.vy = -200 - Math.random() * 300;
+    world.boxes.push(b);
+  }
+
+  function clearBoxes() {
+    world.boxes = [];
+  }
+
+  function explosion(x,y, power=180000) {
+    for (const p of world.particles) {
+      const dx = p.x - x, dy = p.y - y;
+      const d2 = dx*dx + dy*dy + 100; // prevent infinity
+      const inv = power / d2;
+      p.addForce(dx * inv, dy * inv);
+    }
+    for (const b of world.boxes) {
+      const cx = b.x + b.w/2, cy = b.y + b.h/2;
+      const dx = cx - x, dy = cy - y;
+      const d2 = dx*dx + dy*dy + 100;
+      const inv = power / d2;
+      b.vx += dx * inv * 0.2;
+      b.vy += dy * inv * 0.2;
+    }
+  }
+
+  // ===================== Simulation Loop =====================
+  let last = performance.now();
+  const dollCenterX = () => canvas.width / (2*DPR);
+  const dollCenterY = () => Math.min(canvas.height/(2*DPR) - 80, 380);
+
+  let ragdoll = makeStickman(dollCenterX(), dollCenterY(), 1.0);
+
+  function resetDoll() {
+    ragdoll = makeStickman(dollCenterX(), dollCenterY(), 1.0);
+  }
+
+  function step() {
+    const now = performance.now();
+    const dt = Math.min(1/30, (now - last) / 1000); // clamp big jumps
+    last = now;
+    if (world.paused) return;
+
+    // Forces
+    for (const p of world.particles) {
+      if (world.gravityOn) p.addForce(0, 2600 * p.mass); // gravity
+      // light air drag via Verlet handled by damping
+    }
+
+    // Mouse grab: apply a spring toward the cursor
+    if (mouse.down && mouse.grabbed) {
+      const p = mouse.grabbed;
+      // target point
+      const tx = mouse.x + mouse.grabOffset.x;
+      const ty = mouse.y + mouse.grabOffset.y;
+      // apply "spring" force
+      const k = 1200; // spring stiffness
+      p.addForce((tx - p.x) * k, (ty - p.y) * k);
+      // extra damping while dragging
+      p.px = p.x - (p.x - p.px) * 0.6;
+      p.py = p.y - (p.y - p.py) * 0.6;
+    }
+
+    // Integrate
+    const damping = world.damping;
+    for (const p of world.particles) p.integrate(dt, damping);
+
+    // World floor & walls
+    const floor = canvas.height / DPR - 10;
+    for (const p of world.particles) {
+      if (p.x < 10) { p.x = 10; }
+      if (p.x > canvas.width/DPR - 10) { p.x = canvas.width/DPR - 10; }
+      if (p.y > floor) {
+        p.y = floor;
+        // fake friction by reducing horizontal "velocity"
+        p.px = p.x - (p.x - p.px) * 0.6;
+      }
+      if (p.y < 10) { p.y = 10; }
+    }
+
+    // Solve constraints multiple times (stiffer feel)
+    for (let i=0;i<world.iterations;i++) {
+      for (const c of world.constraints) c.satisfy();
+      // Re-apply world bounds each iteration for stability
+      for (const p of world.particles) {
+        if (p.x < 10) p.x = 10;
+        if (p.x > canvas.width/DPR - 10) p.x = canvas.width/DPR - 10;
+        if (p.y > floor) p.y = floor;
+        if (p.y < 10) p.y = 10;
+      }
+      // Box collisions
+      for (const b of world.boxes) {
+        for (const p of world.particles) b.collideParticle(p);
+      }
+    }
+
+    // Update boxes
+    for (const b of world.boxes) b.update(dt, world.gravityOn);
+  }
+
+  function draw() {
+    const g = ctx;
+    const w = canvas.width / DPR, h = canvas.height / DPR;
+    g.clearRect(0,0,w,h);
+
+    // Ground
+    g.strokeStyle = 'rgba(255,255,255,.12)';
+    g.lineWidth = 2;
+    g.beginPath();
+    g.moveTo(0, h-10);
+    g.lineTo(w, h-10);
+    g.stroke();
+
+    // Constraints (bones)
+    if (world.showConstraints) {
+      g.lineWidth = 2;
+      g.strokeStyle = 'rgba(200,210,255,.25)';
+      g.beginPath();
+      for (const c of world.constraints) {
+        g.moveTo(c.a.x, c.a.y);
+        g.lineTo(c.b.x, c.b.y);
+      }
+      g.stroke();
+    }
+
+    // Draw “limb strokes” for a stickman vibe (selected key bones bolder)
+    const drawBone = (a,b, lw=4) => {
+      g.lineWidth = lw;
+      g.strokeStyle = 'rgba(240,240,255,.75)';
+      g.beginPath();
+      g.moveTo(a.x, a.y);
+      g.lineTo(b.x, b.y);
+      g.stroke();
+    };
+    // Recreate references to ensure drawing even after reset
+    const refs = (() => {
+      // Try to pick semantic joints from current particles by proximity to rough areas around chest
+      // (We already keep ragdoll refs; use them if available)
+      return ragdoll;
+    })();
+
+    if (refs) {
+      // arms
+      drawBone(refs.shoulderL, refs.elbowL, 3);
+      drawBone(refs.elbowL, refs.wristL, 3);
+      drawBone(refs.shoulderR, refs.elbowR, 3);
+      drawBone(refs.elbowR, refs.wristR, 3);
+      // legs
+      drawBone(refs.hipL, refs.kneeL, 5);
+      drawBone(refs.kneeL, refs.ankleL, 5);
+      drawBone(refs.hipR, refs.kneeR, 5);
+      drawBone(refs.kneeR, refs.ankleR, 5);
+      // spine/shoulders/hips
+      drawBone(refs.neck, refs.chest, 5);
+      drawBone(refs.chest, refs.hipL, 4);
+      drawBone(refs.chest, refs.hipR, 4);
+      drawBone(refs.shoulderL, refs.shoulderR, 3.5);
+      drawBone(refs.hipL, refs.hipR, 3.5);
+
+      // head
+      g.lineWidth = 3.5;
+      g.strokeStyle = 'rgba(250,250,255,.9)';
+      g.beginPath();
+      g.arc(refs.head.x, refs.head.y, refs.head.radius, 0, Math.PI*2);
+      g.stroke();
+      // little face dot for orientation
+      g.fillStyle = 'rgba(255,255,255,.85)';
+      g.beginPath();
+      g.arc(refs.head.x + refs.head.radius*0.55, refs.head.y - refs.head.radius*0.25, 2.2, 0, Math.PI*2);
+      g.fill();
+    }
+
+    // Particles (joints)
+    for (const p of world.particles) {
+      g.fillStyle = 'rgba(120,160,255,.25)';
+      g.strokeStyle = 'rgba(220,230,255,.55)';
+      g.lineWidth = 1.5;
+      g.beginPath();
+      g.arc(p.x, p.y, 3, 0, Math.PI*2);
+      g.fill(); g.stroke();
+    }
+
+    // Boxes
+    for (const b of world.boxes) b.draw(g);
+
+    // Cursor hint
+    g.fillStyle = 'rgba(255,255,255,.08)';
+    g.beginPath();
+    g.arc(mouse.x, mouse.y, 16, 0, Math.PI*2);
+    g.fill();
+
+    // HUD
+    g.fillStyle = 'rgba(255,255,255,.6)';
+    g.font = '12px system-ui, sans-serif';
+    g.fillText(`Gravity: ${world.gravityOn ? 'ON' : 'OFF'} • Iterations: ${world.iterations} • Boxes: ${world.boxes.length}`, 12, 22);
+    if (world.paused) {
+      g.fillStyle = 'rgba(255,255,255,.85)';
+      g.font = '600 22px system-ui, sans-serif';
+      g.fillText('PAUSED', 12, 46);
+    }
+  }
+
+  function frame() {
+    step();
+    draw();
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // ===================== Keyboard =====================
+  window.addEventListener('keydown', (e) => {
+    const k = e.key.toLowerCase();
+    if (k === 'g') world.gravityOn = !world.gravityOn;
+    else if (k === 'p') world.paused = !world.paused;
+    else if (k === 'r') resetDoll();
+    else if (k === 'f') explosion(mouse.x, mouse.y);
+    else if (k === 'b') clearBoxes();
+    else if (k === 'h') world.showConstraints = !world.showConstraints;
+    else if (k === '+' || k === '=') world.iterations = Math.min(20, world.iterations+1);
+    else if (k === '-' || k === '_') world.iterations = Math.max(1, world.iterations-1);
+  });
+
+  // ===================== Nice initial toss =====================
+  setTimeout(() => explosion(dollCenterX()-120, dollCenterY()-120, 140000), 400);
+
+})();
+</script>
+</body>
+</html>
